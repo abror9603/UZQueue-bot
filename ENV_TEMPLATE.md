@@ -22,9 +22,11 @@ REDIS_PASSWORD=
 PORT=3000
 NODE_ENV=development
 
-# AI API Keys (for future integration - commented out)
-# OPENAI_API_KEY=your_openai_api_key
-# GOOGLE_CLOUD_API_KEY=your_google_cloud_api_key
+# OpenAI API Configuration
+OPENAI_API_KEY=""
+
+# Google API Configuration
+GOOGLE_API_KEY=""
 
 # Third-party API Endpoints (for future integration - commented out)
 # AI_ROUTING_API_ENDPOINT=https://api.example.com/routing

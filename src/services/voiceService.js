@@ -1,40 +1,41 @@
 // Voice Assistant Service
-// TODO: Integrate with speech-to-text API (Google Speech API, OpenAI Whisper, etc.)
-// For demo: returns mock transcription
+// Uses OpenAI Whisper API for speech-to-text transcription
+
+const openaiService = require('./ai/openaiService');
+const FormData = require('form-data');
 
 class VoiceService {
+  /**
+   * Transcribe voice file using OpenAI Whisper
+   * @param {Buffer|Stream} voiceFile - Voice file buffer or stream
+   * @param {string} language - Language code (uz, ru, en)
+   * @returns {Promise<string>} - Transcribed text
+   */
   async transcribeVoice(voiceFile, language = 'uz') {
-    // Simulate voice transcription
-    // In production, this would call Speech-to-Text API:
-    // 
-    // For Google Speech API:
-    // const speech = require('@google-cloud/speech');
-    // const client = new speech.SpeechClient();
-    // const [response] = await client.recognize({
-    //   config: {
-    //     encoding: 'OGG_OPUS',
-    //     sampleRateHertz: 48000,
-    //     languageCode: language === 'uz' ? 'uz-UZ' : language === 'ru' ? 'ru-RU' : 'en-US'
-    //   },
-    //   audio: { content: voiceFile }
-    // });
-    // return response.results[0].alternatives[0].transcript;
-    
-    // For OpenAI Whisper:
-    // const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-    //   },
-    //   body: formData
-    // });
-    // const data = await response.json();
-    // return data.text;
+    try {
+      // Use OpenAI Whisper for transcription
+      const transcribedText = await openaiService.transcribeAudio(voiceFile, language);
+      return transcribedText;
+    } catch (error) {
+      console.error('Error transcribing voice with OpenAI Whisper:', error);
+      
+      // Fallback message based on language
+      const fallbackMessages = {
+        uz: 'Kechirasiz, ovozni taniy olmadik. Iltimos, qayta yuboring.',
+        ru: 'Извините, не удалось распознать голос. Пожалуйста, отправьте снова.',
+        en: 'Sorry, could not recognize voice. Please send again.'
+      };
 
-    // Demo response
-    return "Bu demo matn. Haqiqiy ovoz taniqlash API bilan ulanganida, bu yerda transkripsiya ko'rinadi.";
+      throw new Error(fallbackMessages[language] || fallbackMessages.uz);
+    }
   }
 
+  /**
+   * Process voice message from Telegram
+   * @param {Buffer|Stream} voiceFile - Voice file
+   * @param {string} language - Expected language
+   * @returns {Promise<Object>} - Processing result
+   */
   async processVoiceMessage(voiceFile, language) {
     try {
       const text = await this.transcribeVoice(voiceFile, language);
@@ -50,7 +51,26 @@ class VoiceService {
       };
     }
   }
+
+  /**
+   * Convert Telegram voice file to buffer
+   * Helper method for downloading voice files
+   * @param {string} fileUrl - URL of the voice file
+   * @returns {Promise<Buffer>} - File buffer
+   */
+  async downloadVoiceFile(fileUrl) {
+    try {
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${response.statusText}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      return Buffer.from(arrayBuffer);
+    } catch (error) {
+      console.error('Error downloading voice file:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new VoiceService();
-

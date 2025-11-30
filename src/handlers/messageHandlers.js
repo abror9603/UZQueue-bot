@@ -80,10 +80,17 @@ class MessageHandlers {
       // Download voice file
       const fileId = msg.voice.file_id;
       const file = await bot.getFile(fileId);
-      const fileStream = bot.getFileStream(fileId);
+      
+      // Get file URL and download it
+      const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
+      
+      // Download voice file as buffer
+      const response = await fetch(fileUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      const voiceBuffer = Buffer.from(arrayBuffer);
 
-      // Process voice (demo mode)
-      const result = await voiceService.processVoiceMessage(fileStream, language);
+      // Process voice with OpenAI Whisper
+      const result = await voiceService.processVoiceMessage(voiceBuffer, language);
       
       if (result.success) {
         await bot.sendMessage(chatId, `${i18n.t('voice.recognized')} ${result.text}`);
@@ -117,9 +124,12 @@ class MessageHandlers {
       const photo = msg.photo[msg.photo.length - 1]; // Get largest photo
       const fileId = photo.file_id;
       const file = await bot.getFile(fileId);
+      
+      // Get file URL
+      const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
 
-      // Analyze document (demo mode)
-      const analysis = await documentRecognitionService.analyzeDocument(fileId);
+      // Analyze document with OpenAI Vision
+      const analysis = await documentRecognitionService.analyzeDocument(fileUrl, 'auto', language);
 
       let response = `${i18n.t('document_recognition.general_fields')}:\n`;
       
