@@ -114,6 +114,7 @@ Har doim aniq yechim chiqaring.`;
     }
 
     const FormData = require('form-data');
+    const https = require('https');
     const languageMap = {
       uz: 'uz',
       ru: 'ru',
@@ -121,40 +122,71 @@ Har doim aniq yechim chiqaring.`;
     };
 
     try {
-      const formData = new FormData();
-      
-      // If audioFile is a buffer
-      if (Buffer.isBuffer(audioFile)) {
-        formData.append('file', audioFile, {
-          filename: 'audio.ogg',
-          contentType: 'audio/ogg'
-        });
-      } else {
+      if (!Buffer.isBuffer(audioFile)) {
         throw new Error('Audio file must be a Buffer.');
       }
 
+      const formData = new FormData();
+      
+      // Append file with proper options
+      // Telegram voice messages are typically in OGG format
+      formData.append('file', audioFile, {
+        filename: 'audio.ogg',
+        contentType: 'audio/ogg',
+        knownLength: audioFile.length
+      });
+      
       formData.append('model', 'whisper-1');
       const langCode = languageMap[language] || 'uz';
       if (langCode !== 'uz') {
         formData.append('language', langCode);
       }
 
-      const response = await fetch(`${this.baseURL}/audio/transcriptions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          ...formData.getHeaders()
-        },
-        body: formData
+      // Use https module for proper FormData handling in Node.js
+      return new Promise((resolve, reject) => {
+        const url = new URL(`${this.baseURL}/audio/transcriptions`);
+        
+        const options = {
+          hostname: url.hostname,
+          port: url.port || 443,
+          path: url.pathname,
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            ...formData.getHeaders()
+          }
+        };
+
+        const req = https.request(options, (res) => {
+          let data = '';
+
+          res.on('data', (chunk) => {
+            data += chunk;
+          });
+
+          res.on('end', () => {
+            try {
+              if (res.statusCode !== 200) {
+                const error = JSON.parse(data);
+                reject(new Error(`OpenAI Whisper error: ${error.error?.message || res.statusMessage}`));
+                return;
+              }
+
+              const result = JSON.parse(data);
+              resolve(result.text);
+            } catch (parseError) {
+              reject(new Error(`Failed to parse response: ${parseError.message}`));
+            }
+          });
+        });
+
+        req.on('error', (error) => {
+          reject(new Error(`Request failed: ${error.message}`));
+        });
+
+        // Pipe form data to request
+        formData.pipe(req);
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`OpenAI Whisper error: ${error.error?.message || response.statusText}`);
-      }
-
-      const data = await response.json();
-      return data.text;
     } catch (error) {
       console.error('Error transcribing audio:', error);
       throw error;

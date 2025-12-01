@@ -93,10 +93,11 @@ class MessageHandlers {
       const result = await voiceService.processVoiceMessage(voiceBuffer, language);
       
       if (result.success) {
+        // Show transcribed text
         await bot.sendMessage(chatId, `${i18n.t('voice.recognized')} ${result.text}`);
         
-        // Now process as text
-        await this.handleText(bot, { ...msg, text: result.text }, language, null, 'voice_assistant');
+        // Process transcribed text with AI in user's selected language
+        await this.processVoiceWithAI(bot, msg, result.text, language);
       } else {
         await bot.sendMessage(chatId, i18n.t('voice.error'));
       }
@@ -262,6 +263,55 @@ class MessageHandlers {
       : 'Send a voice message:';
 
     await bot.sendMessage(chatId, prompt, Keyboard.getBackKeyboard(language));
+  }
+
+  /**
+   * Process transcribed voice message with AI in user's selected language
+   * @param {Object} bot - Telegram bot instance
+   * @param {Object} msg - Message object
+   * @param {string} transcribedText - Transcribed text from voice
+   * @param {string} language - User's selected language (uz, ru, en)
+   */
+  async processVoiceWithAI(bot, msg, transcribedText, language) {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+
+    i18n.changeLanguage(language);
+
+    try {
+      // Use AI to process the transcribed text and respond in user's language
+      const { askAI } = require('../services/ai/aiHelper');
+      
+      // Show processing message
+      const processingMsg = language === 'uz'
+        ? 'Javob tayyorlanmoqda...'
+        : language === 'ru'
+        ? 'Подготовка ответа...'
+        : 'Preparing response...';
+      
+      await bot.sendMessage(chatId, processingMsg);
+
+      // Get AI response in user's selected language
+      const aiResponse = await askAI(transcribedText, language);
+
+      // Send AI response
+      await bot.sendMessage(chatId, aiResponse, Keyboard.getMainMenu(language));
+      
+      // Clear state
+      await stateService.clearState(userId);
+      await userService.updateUserStep(userId, null, null);
+    } catch (error) {
+      console.error('Error processing voice with AI:', error);
+      
+      // Fallback response based on language
+      const errorMsg = language === 'uz'
+        ? 'Kechirasiz, javob tayyorlashda xatolik yuz berdi. Iltimos, qayta urinib ko\'ring.'
+        : language === 'ru'
+        ? 'Извините, произошла ошибка при подготовке ответа. Пожалуйста, попробуйте снова.'
+        : 'Sorry, an error occurred while preparing the response. Please try again.';
+      
+      await bot.sendMessage(chatId, errorMsg, Keyboard.getMainMenu(language));
+    }
   }
 
   // Queue Booking handlers

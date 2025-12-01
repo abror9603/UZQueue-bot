@@ -103,10 +103,10 @@ Do not show confidential information (passport number, TIN), only field names.`
     return {
       documentType,
       generalFields: {
-        fullName: '[Taniqlandi / Распознано / Recognized]',
-        documentNumber: '[Taniqlandi / Распознано / Recognized]',
-        birthDate: '[Taniqlandi / Распознано / Recognized]',
-        issueDate: '[Taniqlandi / Распознано / Recognized]'
+        fullName: '[Tasdiqlandi / Распознано / Recognized]',
+        documentNumber: '[Tasdiqlandi / Распознано / Recognized]',
+        birthDate: '[Tasdiqlandi / Распознано / Recognized]',
+        issueDate: '[Tasdiqlandi / Распознано / Recognized]'
       },
       errors: errors.length > 0 ? errors : ['Xatoliklar aniqlanmadi / Ошибки не обнаружены / No errors detected'],
       formatAdvice: formatAdvice.length > 0 ? formatAdvice : ['Yaxshi yorug\'likda, to\'liq ko\'rinishida / При хорошем освещении, полностью видим / Good lighting, fully visible'],

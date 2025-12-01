@@ -33,7 +33,7 @@
   },
   "voice": {
     "processing": "Ovoz qayta ishlanmoqda...",
-    "recognized": "Taniqlandi:",
+    "recognized": "Tasdiqlandi:",
     "error": "Ovozni taniy olmadik. Iltimos, qayta yuboring."
   },
   "queue": {
