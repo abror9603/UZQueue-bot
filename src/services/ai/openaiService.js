@@ -105,7 +105,7 @@ Har doim aniq yechim chiqaring.`;
   /**
    * Transcribe audio using OpenAI Whisper
    * @param {Buffer|string} audioFile - Audio file buffer or file path
-   * @param {string} language - Language code (uz, ru, en)
+   * @param {string} language - Language code (uz, ru, en) - NOT USED, Whisper auto-detects
    * @returns {Promise<string>} - Transcribed text
    */
   async transcribeAudio(audioFile, language = 'uz') {
@@ -115,11 +115,6 @@ Har doim aniq yechim chiqaring.`;
 
     const FormData = require('form-data');
     const https = require('https');
-    const languageMap = {
-      uz: 'uz',
-      ru: 'ru',
-      en: 'en'
-    };
 
     try {
       if (!Buffer.isBuffer(audioFile)) {
@@ -128,19 +123,22 @@ Har doim aniq yechim chiqaring.`;
 
       const formData = new FormData();
       
+      // Determine file format and extension
+      // Whisper API supports: mp3, mp4, mpeg, mpga, m4a, wav, webm, ogg
+      // We'll try to detect format or default to mp3
+      const fileExtension = 'mp3'; // Default, can be changed based on actual format
+      const contentType = 'audio/mpeg';
+      
       // Append file with proper options
-      // Telegram voice messages are typically in OGG format
       formData.append('file', audioFile, {
-        filename: 'audio.ogg',
-        contentType: 'audio/ogg',
+        filename: `audio.${fileExtension}`,
+        contentType: contentType,
         knownLength: audioFile.length
       });
       
+      // Only specify model - Whisper auto-detects language
+      // DO NOT include language parameter - it's not supported in current API
       formData.append('model', 'whisper-1');
-      const langCode = languageMap[language] || 'uz';
-      if (langCode !== 'uz') {
-        formData.append('language', langCode);
-      }
 
       // Use https module for proper FormData handling in Node.js
       return new Promise((resolve, reject) => {

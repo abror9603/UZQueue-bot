@@ -10,6 +10,7 @@ RUN apk add --no-cache \
     make \
     g++ \
     postgresql-client \
+    ffmpeg \
     bash
 
 # Copy package files

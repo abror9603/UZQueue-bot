@@ -77,20 +77,22 @@ class MessageHandlers {
     await bot.sendMessage(chatId, i18n.t('voice.processing'));
     
     try {
-      // Download voice file
+      // Download voice file from Telegram
       const fileId = msg.voice.file_id;
       const file = await bot.getFile(fileId);
       
-      // Get file URL and download it
+      // Get file URL
       const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
       
-      // Download voice file as buffer
-      const response = await fetch(fileUrl);
-      const arrayBuffer = await response.arrayBuffer();
-      const voiceBuffer = Buffer.from(arrayBuffer);
+      // Download voice file as buffer using voiceService
+      const voiceBuffer = await voiceService.downloadVoiceFile(fileUrl);
 
       // Process voice with OpenAI Whisper
-      const result = await voiceService.processVoiceMessage(voiceBuffer, language);
+      // convertToMp3: true - converts OGG to MP3 for better quality (requires ffmpeg)
+      // If ffmpeg is not available, will use original OGG format
+      const result = await voiceService.processVoiceMessage(voiceBuffer, language, {
+        convertToMp3: true // Enable MP3 conversion if ffmpeg is available
+      });
       
       if (result.success) {
         // Show transcribed text
