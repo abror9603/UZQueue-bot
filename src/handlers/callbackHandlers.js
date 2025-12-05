@@ -1,8 +1,8 @@
-const userService = require('../services/userService');
-const stateService = require('../services/stateService');
-const queueService = require('../services/queueService');
-const i18n = require('../config/i18n');
-const Keyboard = require('../utils/keyboard');
+const userService = require("../services/userService");
+const stateService = require("../services/stateService");
+const queueService = require("../services/queueService");
+const i18n = require("../config/i18n");
+const Keyboard = require("../utils/keyboard");
 
 class CallbackHandlers {
   async handleCallback(bot, callbackQuery) {
@@ -19,20 +19,30 @@ class CallbackHandlers {
     i18n.changeLanguage(language);
 
     // Handle language selection
-    if (data.startsWith('lang_')) {
+    if (data.startsWith("lang_")) {
       await this.handleLanguageChange(bot, msg, userId, data);
     }
+    // Handle organization type selection
+    else if (data.startsWith("org_type_")) {
+      const organizationHandlers = require("./organizationHandlers");
+      const orgType = data.replace("org_type_", "");
+      await organizationHandlers.handleOrgTypeSelection(
+        bot,
+        callbackQuery,
+        orgType
+      );
+    }
     // Handle queue slot selection
-    else if (data.startsWith('slot_')) {
+    else if (data.startsWith("slot_")) {
       await this.handleSlotSelection(bot, msg, userId, data, language);
     }
   }
 
   async handleLanguageChange(bot, msg, userId, data) {
     const chatId = msg.chat.id;
-    const langCode = data.split('_')[1]; // uz, ru, or en
+    const langCode = data.split("_")[1]; // uz, ru, or en
 
-    if (!['uz', 'ru', 'en'].includes(langCode)) {
+    if (!["uz", "ru", "en"].includes(langCode)) {
       return;
     }
 
@@ -40,22 +50,31 @@ class CallbackHandlers {
       await userService.updateLanguage(userId, langCode);
       i18n.changeLanguage(langCode);
 
-      const langName = langCode === 'uz' ? 'O\'zbek' : langCode === 'ru' ? 'Русский' : 'English';
-      const message = `${i18n.t('settings.language_changed')}: ${langName}`;
+      const langName =
+        langCode === "uz"
+          ? "O'zbek"
+          : langCode === "ru"
+          ? "Русский"
+          : "English";
+      const message = `${i18n.t("settings.language_changed")}: ${langName}`;
 
       await bot.editMessageText(message, {
         chat_id: chatId,
         message_id: msg.message_id,
-        reply_markup: Keyboard.getLanguageKeyboard(langCode).reply_markup
+        reply_markup: Keyboard.getLanguageKeyboard(langCode).reply_markup,
       });
 
       // Send main menu after a short delay
       setTimeout(async () => {
-        await bot.sendMessage(chatId, i18n.t('menu.main'), Keyboard.getMainMenu(langCode));
+        await bot.sendMessage(
+          chatId,
+          i18n.t("menu.main"),
+          Keyboard.getMainMenu(langCode)
+        );
       }, 1000);
     } catch (error) {
-      console.error('Error changing language:', error);
-      await bot.sendMessage(chatId, i18n.t('common.error'));
+      console.error("Error changing language:", error);
+      await bot.sendMessage(chatId, i18n.t("common.error"));
     }
   }
 
@@ -64,42 +83,55 @@ class CallbackHandlers {
     i18n.changeLanguage(language);
 
     try {
-      const slotIndex = parseInt(data.split('_')[1]) - 1;
-      const slots = await stateService.getData(userId, 'available_slots');
+      // Get org context
+      const organizationHandlers = require("./organizationHandlers");
+      const orgId = await organizationHandlers.getUserOrgContext(userId);
+
+      if (!orgId) {
+        await bot.sendMessage(chatId, i18n.t("common.error"));
+        return;
+      }
+
+      const slotIndex = parseInt(data.split("_")[1]) - 1;
+      const slots = await stateService.getData(userId, "available_slots");
 
       if (!slots || !slots[slotIndex]) {
-        await bot.sendMessage(chatId, i18n.t('common.error'));
+        await bot.sendMessage(chatId, i18n.t("common.error"));
         return;
       }
 
       const selectedSlot = slots[slotIndex];
-      
-      // Book the queue
-      const queue = await queueService.bookQueue(userId, {
-        organization: 'Demo Organization',
-        department: 'Demo Department',
-        branch: selectedSlot.branch,
-        date: selectedSlot.date,
-        time: selectedSlot.time,
-        queueNumber: selectedSlot.queueNumber,
-        distance: selectedSlot.distance
-      });
 
-      let response = `${i18n.t('queue.booking_success')}\n\n`;
-      response += `🎫 ${i18n.t('queue.queue_number')}: ${queue.queueNumber}\n`;
-      response += `📅 ${i18n.t('queue.date')}: ${selectedSlot.date}\n`;
-      response += `🕐 ${i18n.t('queue.time')}: ${selectedSlot.time}\n`;
-      response += `📍 ${i18n.t('queue.branch')}: ${selectedSlot.branch}`;
+      // Book the queue
+      const queue = await queueService.bookQueue(
+        userId,
+        {
+          orgId,
+          organization: "Demo Organization",
+          department: "Demo Department",
+          branch: selectedSlot.branch,
+          date: selectedSlot.date,
+          time: selectedSlot.time,
+          queueNumber: selectedSlot.queueNumber,
+          distance: selectedSlot.distance,
+        },
+        orgId
+      );
+
+      let response = `${i18n.t("queue.booking_success")}\n\n`;
+      response += `🎫 ${i18n.t("queue.queue_number")}: ${queue.queueNumber}\n`;
+      response += `📅 ${i18n.t("queue.date")}: ${selectedSlot.date}\n`;
+      response += `🕐 ${i18n.t("queue.time")}: ${selectedSlot.time}\n`;
+      response += `📍 ${i18n.t("queue.branch")}: ${selectedSlot.branch}`;
 
       await bot.sendMessage(chatId, response, Keyboard.getMainMenu(language));
       await stateService.clearState(userId);
       await userService.updateUserStep(userId, null, null);
     } catch (error) {
-      console.error('Error booking slot:', error);
-      await bot.sendMessage(chatId, i18n.t('common.error'));
+      console.error("Error booking slot:", error);
+      await bot.sendMessage(chatId, i18n.t("common.error"));
     }
   }
 }
 
 module.exports = new CallbackHandlers();
-

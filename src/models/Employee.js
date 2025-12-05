@@ -1,67 +1,74 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const Application = sequelize.define(
-  "Application",
+const Employee = sequelize.define(
+  "Employee",
   {
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },
-    userId: {
-      type: DataTypes.BIGINT,
+    employeeId: {
+      type: DataTypes.INTEGER,
+      unique: true,
       allowNull: false,
-      references: {
-        model: "users",
-        key: "telegramId",
-      },
+      field: "employee_id",
     },
     orgId: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       references: {
         model: "organizations",
         key: "org_id",
       },
       field: "org_id",
-      comment: "Tashkilot ID",
     },
-    applicationNumber: {
-      type: DataTypes.STRING,
+    telegramId: {
+      type: DataTypes.BIGINT,
       unique: true,
       allowNull: false,
+      field: "telegram_id",
     },
-    organization: {
+    fullName: {
       type: DataTypes.STRING,
+      allowNull: true,
+      field: "full_name",
+    },
+    role: {
+      type: DataTypes.ENUM("admin", "staff"),
+      defaultValue: "staff",
       allowNull: false,
     },
-    department: {
+    position: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: "Lavozim",
+    },
+    phone: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    serviceType: {
-      type: DataTypes.STRING,
-      allowNull: false,
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      field: "is_active",
     },
-    status: {
-      type: DataTypes.STRING,
-      defaultValue: "pending",
-      allowNull: false,
-    },
-    estimatedCompletionTime: {
+    joinedAt: {
       type: DataTypes.DATE,
       allowNull: true,
+      field: "joined_at",
     },
-    documentData: {
+    metadata: {
       type: DataTypes.JSONB,
       allowNull: true,
     },
   },
   {
-    tableName: "applications",
+    tableName: "employees",
     timestamps: true,
+    underscored: true,
   }
 );
 
-module.exports = Application;
+module.exports = Employee;

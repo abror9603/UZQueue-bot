@@ -2,13 +2,18 @@
 // TODO: Integrate with government services API
 // For demo: returns mock tracking data
 
-const { Application } = require('../models');
+const { Application } = require("../models");
 
 class ApplicationTrackingService {
-  async trackApplication(applicationNumber) {
+  async trackApplication(applicationNumber, orgId = null) {
     try {
+      const where = { applicationNumber };
+      if (orgId) {
+        where.orgId = orgId;
+      }
+
       const application = await Application.findOne({
-        where: { applicationNumber }
+        where,
       });
 
       if (!application) {
@@ -30,12 +35,14 @@ class ApplicationTrackingService {
         status: application.status,
         statusInfo: statusInfo,
         nextStep: statusInfo.nextStep,
-        estimatedCompletionTime: application.estimatedCompletionTime || this.calculateEstimatedTime(application.createdAt),
+        estimatedCompletionTime:
+          application.estimatedCompletionTime ||
+          this.calculateEstimatedTime(application.createdAt),
         submittedAt: application.createdAt,
-        updatedAt: application.updatedAt
+        updatedAt: application.updatedAt,
       };
     } catch (error) {
-      console.error('Error tracking application:', error);
+      console.error("Error tracking application:", error);
       return null;
     }
   }
@@ -43,37 +50,37 @@ class ApplicationTrackingService {
   getStatusInfo(status) {
     const statusMap = {
       pending: {
-        name: 'Ko\'rib chiqilmoqda',
-        nameRu: 'На рассмотрении',
-        nameEn: 'Under Review',
-        nextStep: 'Hujjatlar tekshirilmoqda',
-        nextStepRu: 'Документы проверяются',
-        nextStepEn: 'Documents are being reviewed'
+        name: "Ko'rib chiqilmoqda",
+        nameRu: "На рассмотрении",
+        nameEn: "Under Review",
+        nextStep: "Hujjatlar tekshirilmoqda",
+        nextStepRu: "Документы проверяются",
+        nextStepEn: "Documents are being reviewed",
       },
       processing: {
-        name: 'Qayta ishlanmoqda',
-        nameRu: 'В обработке',
-        nameEn: 'Processing',
-        nextStep: 'Xulosa tayyorlanmoqda',
-        nextStepRu: 'Подготавливается заключение',
-        nextStepEn: 'Conclusion is being prepared'
+        name: "Qayta ishlanmoqda",
+        nameRu: "В обработке",
+        nameEn: "Processing",
+        nextStep: "Xulosa tayyorlanmoqda",
+        nextStepRu: "Подготавливается заключение",
+        nextStepEn: "Conclusion is being prepared",
       },
       approved: {
-        name: 'Tasdiqlandi',
-        nameRu: 'Одобрено',
-        nameEn: 'Approved',
-        nextStep: 'Hujjatlar tayyor',
-        nextStepRu: 'Документы готовы',
-        nextStepEn: 'Documents ready'
+        name: "Tasdiqlandi",
+        nameRu: "Одобрено",
+        nameEn: "Approved",
+        nextStep: "Hujjatlar tayyor",
+        nextStepRu: "Документы готовы",
+        nextStepEn: "Documents ready",
       },
       rejected: {
-        name: 'Rad etildi',
-        nameRu: 'Отклонено',
-        nameEn: 'Rejected',
-        nextStep: 'Sababni bilib oling',
-        nextStepRu: 'Узнайте причину',
-        nextStepEn: 'Find out the reason'
-      }
+        name: "Rad etildi",
+        nameRu: "Отклонено",
+        nameEn: "Rejected",
+        nextStep: "Sababni bilib oling",
+        nextStepRu: "Узнайте причину",
+        nextStepEn: "Find out the reason",
+      },
     };
 
     return statusMap[status] || statusMap.pending;
@@ -86,29 +93,43 @@ class ApplicationTrackingService {
     return estimatedDate;
   }
 
-  async createApplication(userId, applicationData) {
+  async createApplication(userId, applicationData, orgId = null) {
     try {
       const applicationNumber = this.generateApplicationNumber();
       const application = await Application.create({
         userId,
+        orgId: orgId || applicationData.orgId || null,
         applicationNumber,
         ...applicationData,
-        status: 'pending'
+        status: "pending",
       });
       return application;
     } catch (error) {
-      console.error('Error creating application:', error);
+      console.error("Error creating application:", error);
       throw error;
     }
   }
 
+  async getOrganizationApplications(orgId) {
+    try {
+      return await Application.findAll({
+        where: { orgId },
+        order: [["createdAt", "DESC"]],
+      });
+    } catch (error) {
+      console.error("Error getting organization applications:", error);
+      return [];
+    }
+  }
+
   generateApplicationNumber() {
-    const prefix = 'UZQ';
+    const prefix = "UZQ";
     const timestamp = Date.now().toString().slice(-8);
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    const random = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, "0");
     return `${prefix}-${timestamp}-${random}`;
   }
 }
 
 module.exports = new ApplicationTrackingService();
-

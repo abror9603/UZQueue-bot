@@ -6,6 +6,7 @@ class StateService {
     this.STEP_PREFIX = "user:step:";
     this.SECTION_PREFIX = "user:section:";
     this.DATA_PREFIX = "user:data:";
+    this.ORG_PREFIX = "user:org:";
   }
 
   // Set user state
@@ -52,11 +53,15 @@ class StateService {
     try {
       // Ensure userId is a string
       const userIdStr = String(userId);
-      
+
       // Convert to string and handle null/undefined
-      const stepValue = step ? String(step) : '';
+      const stepValue = step ? String(step) : "";
       if (stepValue) {
-        await redisClient.setEx(`${this.STEP_PREFIX}${userIdStr}`, 3600, stepValue);
+        await redisClient.setEx(
+          `${this.STEP_PREFIX}${userIdStr}`,
+          3600,
+          stepValue
+        );
       } else {
         // If step is null/undefined, delete the key instead
         await redisClient.del(`${this.STEP_PREFIX}${userIdStr}`);
@@ -82,11 +87,15 @@ class StateService {
     try {
       // Ensure userId is a string
       const userIdStr = String(userId);
-      
+
       // Convert to string and handle null/undefined
-      const sectionValue = section ? String(section) : '';
+      const sectionValue = section ? String(section) : "";
       if (sectionValue) {
-        await redisClient.setEx(`${this.SECTION_PREFIX}${userIdStr}`, 3600, sectionValue);
+        await redisClient.setEx(
+          `${this.SECTION_PREFIX}${userIdStr}`,
+          3600,
+          sectionValue
+        );
       } else {
         // If section is null/undefined, delete the key instead
         await redisClient.del(`${this.SECTION_PREFIX}${userIdStr}`);
@@ -142,6 +151,47 @@ class StateService {
       }
     } catch (error) {
       console.error("Error clearing user data:", error);
+    }
+  }
+
+  // Set current organization context
+  async setOrgContext(userId, orgId) {
+    try {
+      const userIdStr = String(userId);
+      const orgIdStr = orgId ? String(orgId) : "";
+      if (orgIdStr) {
+        await redisClient.setEx(
+          `${this.ORG_PREFIX}${userIdStr}`,
+          3600,
+          orgIdStr
+        );
+      } else {
+        await redisClient.del(`${this.ORG_PREFIX}${userIdStr}`);
+      }
+    } catch (error) {
+      console.error("Error setting org context:", error);
+    }
+  }
+
+  // Get current organization context
+  async getOrgContext(userId) {
+    try {
+      const userIdStr = String(userId);
+      const orgId = await redisClient.get(`${this.ORG_PREFIX}${userIdStr}`);
+      return orgId ? parseInt(orgId) : null;
+    } catch (error) {
+      console.error("Error getting org context:", error);
+      return null;
+    }
+  }
+
+  // Clear organization context
+  async clearOrgContext(userId) {
+    try {
+      const userIdStr = String(userId);
+      await redisClient.del(`${this.ORG_PREFIX}${userIdStr}`);
+    } catch (error) {
+      console.error("Error clearing org context:", error);
     }
   }
 }
