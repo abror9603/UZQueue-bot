@@ -57,7 +57,10 @@ class MessageHandlers {
         await this.processQueueBooking(bot, msg, language, text);
       } else if (currentSection === "track_application") {
         await this.processTrackApplication(bot, msg, language, text);
-      } else if (currentSection === "request_intake") {
+      } else if (
+        currentSection === "request_intake" ||
+        currentSection === "appeal_pdf"
+      ) {
         await requestHandlers.processRequestIntake(bot, msg, language, text);
       } else {
         // Default response
