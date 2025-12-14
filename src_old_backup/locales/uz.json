@@ -1,0 +1,82 @@
+{
+  "welcome": "Xush kelibsiz! UZQueue AI Platform ga.",
+  "menu": {
+    "main": "Asosiy menyu",
+    "smart_routing": "🤖 Aqlli yo'naltirish",
+    "document_assistant": "📄 Hujjat yordamchisi",
+    "voice_assistant": "🎤 Ovozli yordamchi",
+    "queue_booking": "📋 Navbat bron qilish",
+    "document_recognition": "📸 Hujjat tahlili",
+    "track_application": "📊 Murojaatni kuzatish",
+    "new_request": "📝 PDF Murojaat yaratish",
+    "faq": "❓ Tez-tez beriladigan savollar",
+    "business_assistant": "💼 Biznes yordamchisi",
+    "simple_queue": "🎫 Oddiy navbat raqami",
+    "services_catalog": "📚 Xizmatlar katalo'gi",
+    "premium": "💎 Premium",
+    "settings": "⚙️ Sozlamalar"
+  },
+  "language": {
+    "select": "Tilni tanlang:",
+    "changed": "Til o'zgartirildi"
+  },
+  "smart_routing": {
+    "ask_problem": "Muammoingizni batafsil tushuntiring:",
+    "analyzing": "Tahlil qilinmoqda...",
+    "result": "Sizga quyidagi variant tavsiya etiladi:",
+    "organization": "Idora",
+    "department": "Bo'lim",
+    "required_documents": "Kerakli hujjatlar",
+    "best_day": "Eng qulay kun",
+    "branch": "Filial"
+  },
+  "document_assistant": {
+    "ask_situation": "Vaziyatingizni tushuntiring:",
+    "preparing": "Hujjat tayyorlanmoqda...",
+    "document_ready": "Hujjat tayyor:",
+    "document_list": "Kerakli hujjatlar ro'yxati:",
+    "where_to_submit": "Qayerga topshirish kerak:"
+  },
+  "voice": {
+    "processing": "Ovoz qayta ishlanmoqda...",
+    "recognized": "Tasdiqlandi:",
+    "error": "Ovozni taniy olmadik. Iltimos, qayta yuboring."
+  },
+  "queue": {
+    "ask_service": "Qanday xizmat kerak?",
+    "searching": "Navbat qidirilmoqda...",
+    "available_slots": "Mavjud vaqtlar:",
+    "booking_success": "Navbat muvaffaqiyatli band qilindi!",
+    "queue_number": "Navbat raqami",
+    "date": "Sana",
+    "time": "Vaqt",
+    "branch": "Filial",
+    "distance": "Masofa"
+  },
+  "document_recognition": {
+    "ask_photo": "Hujjat rasmini yuboring:",
+    "analyzing": "Rasm tahlil qilinmoqda...",
+    "errors_found": "Topilgan xatolar:",
+    "format_advice": "Format bo'yicha maslahat:",
+    "general_fields": "Umumiy maydonlar:"
+  },
+  "tracking": {
+    "ask_number": "Murojaat raqamini kiriting:",
+    "not_found": "Murojaat topilmadi.",
+    "status": "Holat",
+    "next_step": "Keyingi bosqich",
+    "estimated_time": "Taxminiy yechilish vaqti"
+  },
+  "settings": {
+    "current_language": "Joriy til",
+    "language_changed": "Til muvaffaqiyatli o'zgartirildi"
+  },
+  "common": {
+    "back": "⬅️ Orqaga",
+    "cancel": "❌ Bekor qilish",
+    "next": "➡️ Keyingi",
+    "error": "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring.",
+    "help": "Yordam"
+  }
+}
+

@@ -1,50 +1,55 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
 
-const User = sequelize.define('User', {
-  id: {
-    type: DataTypes.BIGINT,
-    primaryKey: true,
-    autoIncrement: false // Telegram user ID as primary key
+const User = sequelize.define(
+  "User",
+  {
+    id: {
+      type: DataTypes.BIGINT,
+      primaryKey: true,
+      autoIncrement: false, // Telegram user ID
+    },
+    telegramId: {
+      type: DataTypes.BIGINT,
+      unique: true,
+      allowNull: false,
+      field: "telegram_id",
+    },
+    username: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    firstName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "first_name",
+    },
+    lastName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "last_name",
+    },
+    language: {
+      type: DataTypes.STRING,
+      defaultValue: "uz",
+      allowNull: false,
+    },
+    phone: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      field: "is_active",
+    },
   },
-  telegramId: {
-    type: DataTypes.BIGINT,
-    unique: true,
-    allowNull: false
-  },
-  username: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  firstName: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  lastName: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  language: {
-    type: DataTypes.STRING,
-    defaultValue: 'uz',
-    allowNull: false
-  },
-  currentStep: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  currentSection: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  isActive: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: true
+  {
+    tableName: "users",
+    timestamps: true,
+    createdAt: "created_at",
+    updatedAt: "updated_at",
   }
-}, {
-  tableName: 'users',
-  timestamps: true
-});
+);
 
 module.exports = User;
-

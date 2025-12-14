@@ -1,8 +1,9 @@
-const userService = require("../services/userService");
-const stateService = require("../services/stateService");
-const queueService = require("../services/queueService");
-const i18n = require("../config/i18n");
-const Keyboard = require("../utils/keyboard");
+const userService = require('../services/userService');
+const locationService = require('../services/locationService');
+const Keyboard = require('../utils/keyboard');
+const i18next = require('../config/i18n');
+const stateService = require('../services/stateService');
+const appealHandlers = require('./appealHandlers');
 
 class CallbackHandlers {
   async handleCallback(bot, callbackQuery) {
@@ -11,127 +12,304 @@ class CallbackHandlers {
     const userId = callbackQuery.from.id;
     const data = callbackQuery.data;
 
-    // Answer callback query immediately
-    await bot.answerCallbackQuery(callbackQuery.id);
-
-    // Get user language
-    const language = await userService.getUserLanguage(userId);
-    i18n.changeLanguage(language);
-
     // Handle language selection
-    if (data.startsWith("lang_")) {
-      await this.handleLanguageChange(bot, msg, userId, data);
-    }
-    // Handle organization type selection
-    else if (data.startsWith("org_type_")) {
-      const organizationHandlers = require("./organizationHandlers");
-      const orgType = data.replace("org_type_", "");
-      await organizationHandlers.handleOrgTypeSelection(
-        bot,
-        callbackQuery,
-        orgType
-      );
-    }
-    // Handle queue slot selection
-    else if (data.startsWith("slot_")) {
-      await this.handleSlotSelection(bot, msg, userId, data, language);
-    }
-  }
-
-  async handleLanguageChange(bot, msg, userId, data) {
-    const chatId = msg.chat.id;
-    const langCode = data.split("_")[1]; // uz, ru, or en
-
-    if (!["uz", "ru", "en"].includes(langCode)) {
+    if (data.startsWith('lang_')) {
+      const langCode = data.replace('lang_', '');
+      await this.handleLanguageChange(bot, msg, userId, langCode);
+      await bot.answerCallbackQuery(callbackQuery.id);
       return;
     }
 
-    try {
-      await userService.updateLanguage(userId, langCode);
-      i18n.changeLanguage(langCode);
+    // Handle region selection
+    if (data.startsWith('region_')) {
+      await this.handleRegionSelection(bot, callbackQuery, data);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
+    }
 
-      const langName =
-        langCode === "uz"
-          ? "O'zbek"
-          : langCode === "ru"
-          ? "Русский"
-          : "English";
-      const message = `${i18n.t("settings.language_changed")}: ${langName}`;
+    // Handle district selection
+    if (data.startsWith('district_')) {
+      await this.handleDistrictSelection(bot, callbackQuery, data);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
+    }
 
-      await bot.editMessageText(message, {
-        chat_id: chatId,
-        message_id: msg.message_id,
-        reply_markup: Keyboard.getLanguageKeyboard(langCode).reply_markup,
-      });
+    // Handle neighborhood selection
+    if (data.startsWith('neighborhood_')) {
+      await this.handleNeighborhoodSelection(bot, callbackQuery, data);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
+    }
 
-      // Send main menu after a short delay
-      setTimeout(async () => {
-        await bot.sendMessage(
-          chatId,
-          i18n.t("menu.main"),
-          Keyboard.getMainMenu(langCode)
-        );
-      }, 1000);
-    } catch (error) {
-      console.error("Error changing language:", error);
-      await bot.sendMessage(chatId, i18n.t("common.error"));
+    // Handle skip neighborhood
+    if (data.startsWith('skip_neighborhood_')) {
+      await this.handleSkipNeighborhood(bot, callbackQuery, data);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
+    }
+
+    // Handle back to regions
+    if (data === 'back_to_regions') {
+      await this.handleBackToRegions(bot, callbackQuery);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
+    }
+
+    // Handle back to districts
+    if (data.startsWith('back_to_districts_')) {
+      await this.handleBackToDistricts(bot, callbackQuery, data);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
+    }
+
+    // Handle cancel appeal
+    if (data === 'cancel_appeal') {
+      await this.handleCancelAppeal(bot, callbackQuery);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
     }
   }
 
-  async handleSlotSelection(bot, msg, userId, data, language) {
+  async handleLanguageChange(bot, msg, userId, langCode) {
     const chatId = msg.chat.id;
-    i18n.changeLanguage(language);
 
-    try {
-      // Get org context
-      const organizationHandlers = require("./organizationHandlers");
-      const orgId = await organizationHandlers.getUserOrgContext(userId);
-
-      if (!orgId) {
-        await bot.sendMessage(chatId, i18n.t("common.error"));
-        return;
-      }
-
-      const slotIndex = parseInt(data.split("_")[1]) - 1;
-      const slots = await stateService.getData(userId, "available_slots");
-
-      if (!slots || !slots[slotIndex]) {
-        await bot.sendMessage(chatId, i18n.t("common.error"));
-        return;
-      }
-
-      const selectedSlot = slots[slotIndex];
-
-      // Book the queue
-      const queue = await queueService.bookQueue(
-        userId,
-        {
-          orgId,
-          organization: "Demo Organization",
-          department: "Demo Department",
-          branch: selectedSlot.branch,
-          date: selectedSlot.date,
-          time: selectedSlot.time,
-          queueNumber: selectedSlot.queueNumber,
-          distance: selectedSlot.distance,
-        },
-        orgId
-      );
-
-      let response = `${i18n.t("queue.booking_success")}\n\n`;
-      response += `🎫 ${i18n.t("queue.queue_number")}: ${queue.queueNumber}\n`;
-      response += `📅 ${i18n.t("queue.date")}: ${selectedSlot.date}\n`;
-      response += `🕐 ${i18n.t("queue.time")}: ${selectedSlot.time}\n`;
-      response += `📍 ${i18n.t("queue.branch")}: ${selectedSlot.branch}`;
-
-      await bot.sendMessage(chatId, response, Keyboard.getMainMenu(language));
-      await stateService.clearState(userId);
-      await userService.updateUserStep(userId, null, null);
-    } catch (error) {
-      console.error("Error booking slot:", error);
-      await bot.sendMessage(chatId, i18n.t("common.error"));
+    if (!['uz', 'ru', 'en'].includes(langCode)) {
+      return;
     }
+
+    await userService.updateLanguage(userId, langCode);
+    i18next.changeLanguage(langCode);
+    const t = i18next.t;
+
+    await bot.sendMessage(chatId, t('language_selected'), Keyboard.getMainMenu(langCode));
+  }
+
+  async handleRegionSelection(bot, callbackQuery, data) {
+    const msg = callbackQuery.message;
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id;
+    
+    const regionId = parseInt(data.replace('region_', ''));
+    const user = await userService.getUser(userId);
+    if (!user) return;
+
+    const language = user.language;
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    // Update state
+    const stateData = await stateService.getData(userId) || {};
+    stateData.regionId = regionId;
+    await stateService.setData(userId, stateData);
+    await stateService.setStep(userId, 'select_district');
+
+    // Get districts for this region
+    const districts = await locationService.getDistrictsByRegion(regionId, language);
+
+    if (districts.length === 0) {
+      await bot.sendMessage(chatId, t('error') + ': Tumanlar topilmadi.');
+      return;
+    }
+
+    // Update message with district selection
+    await bot.editMessageText(
+      t('select_district'),
+      {
+        chat_id: chatId,
+        message_id: msg.message_id,
+        ...Keyboard.getDistrictsInline(districts, language, regionId)
+      }
+    );
+  }
+
+  async handleDistrictSelection(bot, callbackQuery, data) {
+    const msg = callbackQuery.message;
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id;
+    
+    // data format: district_123_456 (districtId_regionId)
+    const parts = data.replace('district_', '').split('_');
+    const districtId = parseInt(parts[0]);
+    const regionId = parseInt(parts[1]);
+
+    const user = await userService.getUser(userId);
+    if (!user) return;
+
+    const language = user.language;
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    // Update state
+    const stateData = await stateService.getData(userId) || {};
+    stateData.districtId = districtId;
+    stateData.regionId = regionId;
+    await stateService.setData(userId, stateData);
+    await stateService.setStep(userId, 'select_neighborhood');
+
+    // Get neighborhoods for this district
+    const neighborhoods = await locationService.getNeighborhoodsByDistrict(districtId, language);
+
+    // Update message with neighborhood selection
+    await bot.editMessageText(
+      t('select_neighborhood'),
+      {
+        chat_id: chatId,
+        message_id: msg.message_id,
+        ...Keyboard.getNeighborhoodsInline(neighborhoods, language, regionId, districtId)
+      }
+    );
+  }
+
+  async handleNeighborhoodSelection(bot, callbackQuery, data) {
+    const msg = callbackQuery.message;
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id;
+    
+    // data format: neighborhood_123_456_789 (neighborhoodId_regionId_districtId)
+    const parts = data.replace('neighborhood_', '').split('_');
+    const neighborhoodId = parseInt(parts[0]);
+    const regionId = parseInt(parts[1]);
+    const districtId = parseInt(parts[2]);
+
+    const user = await userService.getUser(userId);
+    if (!user) return;
+
+    const language = user.language;
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    // Update state
+    const stateData = await stateService.getData(userId) || {};
+    stateData.neighborhoodId = neighborhoodId;
+    stateData.districtId = districtId;
+    stateData.regionId = regionId;
+    await stateService.setData(userId, stateData);
+
+    // Continue to organization selection
+    await appealHandlers.continueToOrganizationSelection(bot, msg, userId, stateData, language);
+  }
+
+  async handleSkipNeighborhood(bot, callbackQuery, data) {
+    const msg = callbackQuery.message;
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id;
+    
+    // data format: skip_neighborhood_456_789 (regionId_districtId)
+    const parts = data.replace('skip_neighborhood_', '').split('_');
+    const regionId = parseInt(parts[0]);
+    const districtId = parseInt(parts[1]);
+
+    const user = await userService.getUser(userId);
+    if (!user) return;
+
+    const language = user.language;
+
+    // Update state (without neighborhood)
+    const stateData = await stateService.getData(userId) || {};
+    stateData.regionId = regionId;
+    stateData.districtId = districtId;
+    stateData.neighborhoodId = null;
+    await stateService.setData(userId, stateData);
+
+    // Continue to organization selection
+    await appealHandlers.continueToOrganizationSelection(bot, msg, userId, stateData, language);
+  }
+
+  async handleBackToRegions(bot, callbackQuery) {
+    const msg = callbackQuery.message;
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id;
+
+    const user = await userService.getUser(userId);
+    if (!user) return;
+
+    const language = user.language;
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    // Reset state
+    await stateService.setStep(userId, 'select_region');
+    const stateData = await stateService.getData(userId) || {};
+    delete stateData.regionId;
+    delete stateData.districtId;
+    delete stateData.neighborhoodId;
+    await stateService.setData(userId, stateData);
+
+    // Get regions
+    const regions = await locationService.getAllRegions(language);
+
+    await bot.editMessageText(
+      t('select_region'),
+      {
+        chat_id: chatId,
+        message_id: msg.message_id,
+        ...Keyboard.getRegionsInline(regions, language)
+      }
+    );
+  }
+
+  async handleBackToDistricts(bot, callbackQuery, data) {
+    const msg = callbackQuery.message;
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id;
+
+    // data format: back_to_districts_456 (regionId)
+    const regionId = parseInt(data.replace('back_to_districts_', ''));
+
+    const user = await userService.getUser(userId);
+    if (!user) return;
+
+    const language = user.language;
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    // Update state
+    await stateService.setStep(userId, 'select_district');
+    const stateData = await stateService.getData(userId) || {};
+    stateData.regionId = regionId;
+    delete stateData.districtId;
+    delete stateData.neighborhoodId;
+    await stateService.setData(userId, stateData);
+
+    // Get districts
+    const districts = await locationService.getDistrictsByRegion(regionId, language);
+
+    await bot.editMessageText(
+      t('select_district'),
+      {
+        chat_id: chatId,
+        message_id: msg.message_id,
+        ...Keyboard.getDistrictsInline(districts, language, regionId)
+      }
+    );
+  }
+
+  async handleCancelAppeal(bot, callbackQuery) {
+    const msg = callbackQuery.message;
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id;
+
+    const user = await userService.getUser(userId);
+    if (!user) return;
+
+    const language = user.language;
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    // Clear state
+    await stateService.clear(userId);
+
+    await bot.editMessageText(
+      t('cancel'),
+      {
+        chat_id: chatId,
+        message_id: msg.message_id
+      }
+    );
+
+    await bot.sendMessage(chatId, t('cancel'), Keyboard.getMainMenu(language));
   }
 }
 
 module.exports = new CallbackHandlers();
+

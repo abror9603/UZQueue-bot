@@ -1,0 +1,82 @@
+{
+  "welcome": "Welcome! To UZQueue AI Platform.",
+  "menu": {
+    "main": "Main menu",
+    "smart_routing": "🤖 Smart Routing",
+    "document_assistant": "📄 Document Assistant",
+    "voice_assistant": "🎤 Voice Assistant",
+    "queue_booking": "📋 Queue Booking",
+    "document_recognition": "📸 Document Recognition",
+    "track_application": "📊 Track Application",
+    "new_request": "📝 Create PDF Appeal",
+    "faq": "❓ FAQ",
+    "business_assistant": "💼 Business Assistant",
+    "simple_queue": "🎫 Simple Queue Number",
+    "services_catalog": "📚 Services Catalog",
+    "premium": "💎 Premium",
+    "settings": "⚙️ Settings"
+  },
+  "language": {
+    "select": "Select language:",
+    "changed": "Language changed"
+  },
+  "smart_routing": {
+    "ask_problem": "Describe your problem in detail:",
+    "analyzing": "Analyzing...",
+    "result": "The following option is recommended:",
+    "organization": "Organization",
+    "department": "Department",
+    "required_documents": "Required documents",
+    "best_day": "Best day",
+    "branch": "Branch"
+  },
+  "document_assistant": {
+    "ask_situation": "Describe your situation:",
+    "preparing": "Preparing document...",
+    "document_ready": "Document ready:",
+    "document_list": "List of required documents:",
+    "where_to_submit": "Where to submit:"
+  },
+  "voice": {
+    "processing": "Processing voice...",
+    "recognized": "Recognized:",
+    "error": "Could not recognize voice. Please send again."
+  },
+  "queue": {
+    "ask_service": "What service do you need?",
+    "searching": "Searching for available slots...",
+    "available_slots": "Available slots:",
+    "booking_success": "Queue successfully booked!",
+    "queue_number": "Queue number",
+    "date": "Date",
+    "time": "Time",
+    "branch": "Branch",
+    "distance": "Distance"
+  },
+  "document_recognition": {
+    "ask_photo": "Send document photo:",
+    "analyzing": "Analyzing photo...",
+    "errors_found": "Errors found:",
+    "format_advice": "Format advice:",
+    "general_fields": "General fields:"
+  },
+  "tracking": {
+    "ask_number": "Enter application number:",
+    "not_found": "Application not found.",
+    "status": "Status",
+    "next_step": "Next step",
+    "estimated_time": "Estimated completion time"
+  },
+  "settings": {
+    "current_language": "Current language",
+    "language_changed": "Language successfully changed"
+  },
+  "common": {
+    "back": "⬅️ Back",
+    "cancel": "❌ Cancel",
+    "next": "➡️ Next",
+    "error": "An error occurred. Please try again.",
+    "help": "Help"
+  }
+}
+

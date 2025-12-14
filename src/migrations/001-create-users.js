@@ -6,22 +6,22 @@ module.exports = {
       id: {
         type: Sequelize.BIGINT,
         primaryKey: true,
-        allowNull: false
+        autoIncrement: false
       },
-      telegramId: {
+      telegram_id: {
         type: Sequelize.BIGINT,
-        unique: true,
-        allowNull: false
+        allowNull: false,
+        unique: true
       },
       username: {
         type: Sequelize.STRING,
         allowNull: true
       },
-      firstName: {
+      first_name: {
         type: Sequelize.STRING,
         allowNull: true
       },
-      lastName: {
+      last_name: {
         type: Sequelize.STRING,
         allowNull: true
       },
@@ -30,25 +30,23 @@ module.exports = {
         defaultValue: 'uz',
         allowNull: false
       },
-      currentStep: {
+      phone: {
         type: Sequelize.STRING,
         allowNull: true
       },
-      currentSection: {
-        type: Sequelize.STRING,
-        allowNull: true
-      },
-      isActive: {
+      is_active: {
         type: Sequelize.BOOLEAN,
         defaultValue: true
       },
       createdAt: {
+        type: Sequelize.DATE,
         allowNull: false,
-        type: Sequelize.DATE
+        field: 'created_at'
       },
       updatedAt: {
+        type: Sequelize.DATE,
         allowNull: false,
-        type: Sequelize.DATE
+        field: 'updated_at'
       }
     });
   },

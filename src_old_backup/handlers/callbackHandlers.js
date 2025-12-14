@@ -1,0 +1,194 @@
+const userService = require("../services/userService");
+const stateService = require("../services/stateService");
+const queueService = require("../services/queueService");
+const i18n = require("../config/i18n");
+const Keyboard = require("../utils/keyboard");
+
+class CallbackHandlers {
+  async handleCallback(bot, callbackQuery) {
+    const msg = callbackQuery.message;
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id;
+    const data = callbackQuery.data;
+
+    // Answer callback query immediately
+    await bot.answerCallbackQuery(callbackQuery.id);
+
+    // Get user language
+    const language = await userService.getUserLanguage(userId);
+    i18n.changeLanguage(language);
+
+    // Handle language selection
+    if (data.startsWith("lang_")) {
+      await this.handleLanguageChange(bot, msg, userId, data);
+    }
+    // Handle organization type selection
+    else if (data.startsWith("org_type_")) {
+      const organizationHandlers = require("./organizationHandlers");
+      const orgType = data.replace("org_type_", "");
+      await organizationHandlers.handleOrgTypeSelection(
+        bot,
+        callbackQuery,
+        orgType
+      );
+    }
+    // Handle queue slot selection
+    else if (data.startsWith("slot_")) {
+      await this.handleSlotSelection(bot, msg, userId, data, language);
+    }
+    // Handle FAQ
+    else if (data.startsWith("faq_")) {
+      const faqHandlers = require("./faqHandlers");
+      if (data.startsWith("faq_category_")) {
+        const categoryId = data.replace("faq_category_", "");
+        await faqHandlers.handleCategory(bot, callbackQuery, categoryId, language);
+      } else if (data.startsWith("faq_question_")) {
+        const parts = data.replace("faq_question_", "").split("_");
+        const categoryId = parts[0];
+        const questionIndex = parseInt(parts[1]);
+        await faqHandlers.handleQuestion(
+          bot,
+          callbackQuery,
+          categoryId,
+          questionIndex,
+          language
+        );
+      } else if (data === "faq_back") {
+        await faqHandlers.handleFaq(bot, { from: callbackQuery.from, chat: { id: chatId } }, language);
+      }
+    }
+    // Handle Business Assistant
+    else if (data.startsWith("business_category_")) {
+      const businessHandlers = require("./businessHandlers");
+      const categoryId = data.replace("business_category_", "");
+      await businessHandlers.handleCategory(bot, callbackQuery, categoryId, language);
+    }
+    // Handle Premium/Subscription
+    else if (data.startsWith("premium_") || data.startsWith("subscribe_") || data.startsWith("business_")) {
+      const premiumHandlers = require("./premiumHandlers");
+      if (data === "premium_menu" || data === "premium_subscribe") {
+        await premiumHandlers.handlePricing(bot, callbackQuery, "premium", language);
+      } else if (data === "business_subscribe") {
+        await premiumHandlers.handlePricing(bot, callbackQuery, "business", language);
+      } else if (data.startsWith("subscribe_")) {
+        const planType = data.replace("subscribe_", "");
+        // TODO: Integrate payment system (Payme API) in Stage 2
+        await bot.sendMessage(
+          chatId,
+          language === "uz"
+            ? "⚠️ To'lov tizimi Stage 2 da faollashtiriladi. Hozircha demo rejimda."
+            : language === "ru"
+            ? "⚠️ Система оплаты будет активирована на Stage 2. Сейчас в демо режиме."
+            : "⚠️ Payment system will be activated in Stage 2. Currently in demo mode.",
+          Keyboard.getMainMenu(language)
+        );
+      }
+    }
+    // Handle usage stats
+    else if (data === "usage_stats") {
+      const premiumHandlers = require("./premiumHandlers");
+      await premiumHandlers.handleUsageStats(bot, callbackQuery, language);
+    }
+    // Handle back to menu
+    else if (data === "back_to_menu") {
+      await bot.sendMessage(chatId, i18n.t("menu.main"), Keyboard.getMainMenu(language));
+    }
+  }
+
+  async handleLanguageChange(bot, msg, userId, data) {
+    const chatId = msg.chat.id;
+    const langCode = data.split("_")[1]; // uz, ru, or en
+
+    if (!["uz", "ru", "en"].includes(langCode)) {
+      return;
+    }
+
+    try {
+      await userService.updateLanguage(userId, langCode);
+      i18n.changeLanguage(langCode);
+
+      const langName =
+        langCode === "uz"
+          ? "O'zbek"
+          : langCode === "ru"
+          ? "Русский"
+          : "English";
+      const message = `${i18n.t("settings.language_changed")}: ${langName}`;
+
+      await bot.editMessageText(message, {
+        chat_id: chatId,
+        message_id: msg.message_id,
+        reply_markup: Keyboard.getLanguageKeyboard(langCode).reply_markup,
+      });
+
+      // Send main menu after a short delay
+      setTimeout(async () => {
+        await bot.sendMessage(
+          chatId,
+          i18n.t("menu.main"),
+          Keyboard.getMainMenu(langCode)
+        );
+      }, 1000);
+    } catch (error) {
+      console.error("Error changing language:", error);
+      await bot.sendMessage(chatId, i18n.t("common.error"));
+    }
+  }
+
+  async handleSlotSelection(bot, msg, userId, data, language) {
+    const chatId = msg.chat.id;
+    i18n.changeLanguage(language);
+
+    try {
+      // Get org context
+      const organizationHandlers = require("./organizationHandlers");
+      const orgId = await organizationHandlers.getUserOrgContext(userId);
+
+      if (!orgId) {
+        await bot.sendMessage(chatId, i18n.t("common.error"));
+        return;
+      }
+
+      const slotIndex = parseInt(data.split("_")[1]) - 1;
+      const slots = await stateService.getData(userId, "available_slots");
+
+      if (!slots || !slots[slotIndex]) {
+        await bot.sendMessage(chatId, i18n.t("common.error"));
+        return;
+      }
+
+      const selectedSlot = slots[slotIndex];
+
+      // Book the queue
+      const queue = await queueService.bookQueue(
+        userId,
+        {
+          orgId,
+          organization: "Demo Organization",
+          department: "Demo Department",
+          branch: selectedSlot.branch,
+          date: selectedSlot.date,
+          time: selectedSlot.time,
+          queueNumber: selectedSlot.queueNumber,
+          distance: selectedSlot.distance,
+        },
+        orgId
+      );
+
+      let response = `${i18n.t("queue.booking_success")}\n\n`;
+      response += `🎫 ${i18n.t("queue.queue_number")}: ${queue.queueNumber}\n`;
+      response += `📅 ${i18n.t("queue.date")}: ${selectedSlot.date}\n`;
+      response += `🕐 ${i18n.t("queue.time")}: ${selectedSlot.time}\n`;
+      response += `📍 ${i18n.t("queue.branch")}: ${selectedSlot.branch}`;
+
+      await bot.sendMessage(chatId, response, Keyboard.getMainMenu(language));
+      await stateService.clearState(userId);
+      await userService.updateUserStep(userId, null, null);
+    } catch (error) {
+      console.error("Error booking slot:", error);
+      await bot.sendMessage(chatId, i18n.t("common.error"));
+    }
+  }
+}
+
+module.exports = new CallbackHandlers();
