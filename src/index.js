@@ -4,6 +4,8 @@ const sequelize = require('./config/database');
 const commandHandlers = require('./handlers/commandHandlers');
 const callbackHandlers = require('./handlers/callbackHandlers');
 const messageHandlers = require('./handlers/messageHandlers');
+const groupRegistrationHandlers = require('./handlers/groupRegistrationHandlers');
+const replyHandlers = require('./handlers/replyHandlers');
 
 // Initialize bot
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {
@@ -75,6 +77,25 @@ bot.onText(/\/admin_status\s+(\S+)\s+(\w+)/, async (msg, match) => {
   }
 });
 
+// Group registration command
+bot.onText(/\/register_group/, async (msg) => {
+  try {
+    await groupRegistrationHandlers.handleRegisterGroup(bot, msg);
+  } catch (error) {
+    console.error('Error in /register_group:', error);
+  }
+});
+
+// Status commands in groups
+bot.onText(/\/status\s+(bajarildi|rad_etildi|jarayonda)/, async (msg, match) => {
+  try {
+    const newStatus = match[1];
+    await commandHandlers.handleGroupStatus(bot, msg, newStatus);
+  } catch (error) {
+    console.error('Error in /status command:', error);
+  }
+});
+
 // Callback query handler
 bot.on('callback_query', async (callbackQuery) => {
   try {
@@ -95,6 +116,20 @@ bot.on('message', async (msg) => {
     if (msg.text && msg.text.startsWith('/')) {
       return;
     }
+
+    // Handle replies to bot messages (group responses)
+    if (msg.reply_to_message && msg.reply_to_message.from.id === (await bot.getMe()).id) {
+      await replyHandlers.handleReply(bot, msg);
+      return;
+    }
+
+    // Try group registration flow first
+    const inRegistration = await groupRegistrationHandlers.processRegistrationStep(bot, msg);
+    if (inRegistration) {
+      return;
+    }
+
+    // Regular message handling
     await messageHandlers.handleMessage(bot, msg);
   } catch (error) {
     console.error('Error in message handler:', error);

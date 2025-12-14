@@ -177,6 +177,85 @@ class CommandHandlers {
       await bot.sendMessage(chatId, t('admin_status_error'));
     }
   }
+
+  async handleGroupStatus(bot, msg, statusText) {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+
+    const telegramGroupService = require('../services/telegramGroupService');
+    const user = await userService.getUser(userId);
+    const language = user?.language || 'uz';
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    // Check if user is admin in this group
+    const isAdmin = await telegramGroupService.isAdmin(chatId, userId);
+    if (!isAdmin) {
+      await bot.sendMessage(chatId, '❌ Faqat guruh adminlari holatni o\'zgartirishi mumkin.');
+      return;
+    }
+
+    // Map status text to status enum
+    const statusMap = {
+      'bajarildi': 'completed',
+      'rad_etildi': 'rejected',
+      'jarayonda': 'pending'
+    };
+
+    const newStatus = statusMap[statusText.toLowerCase()];
+    if (!newStatus) {
+      await bot.sendMessage(chatId, '❌ Noto\'g\'ri holat. Qo\'llab-quvvatlanadigan holatlar: bajarildi, rad_etildi, jarayonda');
+      return;
+    }
+
+    // Find appeal by reply
+    if (!msg.reply_to_message) {
+      await bot.sendMessage(chatId, '❌ Bot yuborgan murojaat xabariga reply qiling.');
+      return;
+    }
+
+    const replyToMessageId = msg.reply_to_message.message_id;
+    const appeal = await appealService.getAppealByGroupMessageId(replyToMessageId);
+    
+    if (!appeal) {
+      await bot.sendMessage(chatId, '❌ Murojaat topilmadi.');
+      return;
+    }
+
+    try {
+      await appealService.updateStatus(appeal.id, newStatus, userId, `Guruh admini tomonidan ${statusText}`);
+
+      // Notify citizen
+      const citizenUser = await userService.getUser(appeal.userId);
+      const citizenLanguage = citizenUser?.language || 'uz';
+      i18next.changeLanguage(citizenLanguage);
+      
+      const statusTexts = {
+        pending: i18next.t('status_pending'),
+        completed: i18next.t('status_completed'),
+        rejected: i18next.t('status_rejected')
+      };
+
+      const notification = i18next.t('status_updated_notification', {
+        appealId: appeal.appealId,
+        status: statusTexts[newStatus]
+      });
+
+      // Generate AI response
+      try {
+        const aiResponse = await aiService.generateStatusResponse(newStatus, appeal, citizenLanguage);
+        await bot.sendMessage(appeal.userId, notification + '\n\n' + aiResponse);
+      } catch (error) {
+        console.error('AI response error:', error);
+        await bot.sendMessage(appeal.userId, notification);
+      }
+
+      await bot.sendMessage(chatId, `✅ Holat yangilandi: ${statusTexts[newStatus]}`);
+    } catch (error) {
+      console.error('Group status error:', error);
+      await bot.sendMessage(chatId, t('admin_status_error'));
+    }
+  }
 }
 
 module.exports = new CommandHandlers();

@@ -55,6 +55,23 @@ class AIService {
     return await this.askAI(prompt, language);
   }
 
+  async generateResponse(prompt, model = 'gpt-4o-mini') {
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: model,
+        messages: [
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7
+      });
+
+      return response.choices[0].message.content;
+    } catch (error) {
+      console.error('AI generateResponse Error:', error);
+      throw error;
+    }
+  }
+
   _getSystemPrompt(language) {
     const prompts = {
       uz: 'Siz UZQueue fuqaro murojaatlari botining AI yordamchisisiz. Siz rasmiy, tushunarli va yordamchi javoblar berasiz.',

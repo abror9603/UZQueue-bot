@@ -98,6 +98,27 @@ class AppealService {
 
     return appeal;
   }
+
+  async updateAppeal(appealId, data) {
+    const appeal = await Appeal.findByPk(appealId);
+    if (!appeal) throw new Error('Appeal not found');
+    
+    await appeal.update(data);
+    return appeal;
+  }
+
+  async getAppealByGroupMessageId(groupMessageId) {
+    return await Appeal.findOne({
+      where: { groupMessageId },
+      include: [
+        { association: 'region' },
+        { association: 'district' },
+        { association: 'neighborhood' },
+        { association: 'organization' },
+        { association: 'telegramGroup' }
+      ]
+    });
+  }
 }
 
 module.exports = new AppealService();

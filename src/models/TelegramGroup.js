@@ -64,6 +64,27 @@ const TelegramGroup = sequelize.define('TelegramGroup', {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
     field: 'is_active'
+  },
+  subscriptionStatus: {
+    type: DataTypes.ENUM('inactive', 'active', 'suspended', 'expired'),
+    defaultValue: 'inactive',
+    allowNull: false,
+    field: 'subscription_status'
+  },
+  subscriptionExpiresAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'subscription_expires_at'
+  },
+  responsiblePerson: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'responsible_person'
+  },
+  responsiblePhone: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'responsible_phone'
   }
 }, {
   tableName: 'telegram_groups',

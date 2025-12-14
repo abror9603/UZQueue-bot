@@ -14,7 +14,8 @@ class TelegramGroupService {
           districtId,
           neighborhoodId,
           organizationId,
-          isActive: true
+          isActive: true,
+          subscriptionStatus: 'active' // Only active subscriptions
         }
       });
       if (exactMatch) return exactMatch;
@@ -27,7 +28,8 @@ class TelegramGroupService {
         districtId,
         neighborhoodId: null,
         organizationId,
-        isActive: true
+        isActive: true,
+        subscriptionStatus: 'active'
       }
     });
     if (districtMatch) return districtMatch;
@@ -39,7 +41,8 @@ class TelegramGroupService {
         districtId: null,
         neighborhoodId: null,
         organizationId,
-        isActive: true
+        isActive: true,
+        subscriptionStatus: 'active'
       }
     });
     if (regionMatch) return regionMatch;
@@ -53,9 +56,25 @@ class TelegramGroupService {
   }
 
   async isAdmin(chatId, userId) {
-    const group = await this.getGroupByChatId(chatId);
-    if (!group || !group.adminIds) return false;
-    return group.adminIds.includes(userId);
+    try {
+      // Convert chatId to string for comparison
+      const chatIdStr = chatId.toString();
+      const group = await TelegramGroup.findOne({ 
+        where: { 
+          chatId: chatIdStr, 
+          isActive: true 
+        } 
+      });
+      
+      if (!group || !group.adminIds || !Array.isArray(group.adminIds)) {
+        return false;
+      }
+      
+      return group.adminIds.includes(parseInt(userId)) || group.adminIds.includes(userId);
+    } catch (error) {
+      console.error('isAdmin error:', error);
+      return false;
+    }
   }
 
   async createGroup(data) {

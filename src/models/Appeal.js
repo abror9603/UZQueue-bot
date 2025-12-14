@@ -95,6 +95,11 @@ const Appeal = sequelize.define('Appeal', {
     type: DataTypes.JSONB,
     allowNull: true,
     field: 'ai_analysis'
+  },
+  groupMessageId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'group_message_id'
   }
 }, {
   tableName: 'appeals',

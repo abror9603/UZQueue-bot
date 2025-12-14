@@ -216,6 +216,111 @@ class Keyboard {
       }
     };
   }
+
+  // Group Registration Keyboards
+  static getRegionsInlineForGroup(regions, language = 'uz') {
+    const buttons = regions.map(region => [{
+      text: region.name,
+      callback_data: `group_region_${region.id}`
+    }]);
+    
+    buttons.push([{
+      text: language === 'ru' ? '❌ Отмена' : language === 'en' ? '❌ Cancel' : '❌ Bekor qilish',
+      callback_data: 'cancel_group_reg'
+    }]);
+    
+    return {
+      reply_markup: {
+        inline_keyboard: buttons
+      }
+    };
+  }
+
+  static getDistrictsInlineForGroup(districts, language = 'uz', regionId, optional = false) {
+    const buttons = districts.map(district => [{
+      text: district.name,
+      callback_data: `group_district_${district.id}_${regionId}`
+    }]);
+    
+    if (optional) {
+      buttons.push([{
+        text: language === 'ru' ? '⏭ Пропустить' : language === 'en' ? '⏭ Skip' : '⏭ O\'tkazib yuborish',
+        callback_data: `group_skip_district_${regionId}`
+      }]);
+    }
+    
+    buttons.push([
+      {
+        text: language === 'ru' ? '◀️ Назад' : language === 'en' ? '◀️ Back' : '◀️ Orqaga',
+        callback_data: 'group_back_region'
+      },
+      {
+        text: language === 'ru' ? '❌ Отмена' : language === 'en' ? '❌ Cancel' : '❌ Bekor qilish',
+        callback_data: 'cancel_group_reg'
+      }
+    ]);
+    
+    return {
+      reply_markup: {
+        inline_keyboard: buttons
+      }
+    };
+  }
+
+  static getNeighborhoodsInlineForGroup(neighborhoods, language = 'uz', regionId, districtId, optional = false) {
+    const buttons = neighborhoods.map(neighborhood => [{
+      text: neighborhood.name,
+      callback_data: `group_neighborhood_${neighborhood.id}_${regionId}_${districtId}`
+    }]);
+    
+    if (optional) {
+      buttons.push([{
+        text: language === 'ru' ? '⏭ Пропустить' : language === 'en' ? '⏭ Skip' : '⏭ O\'tkazib yuborish',
+        callback_data: `group_skip_neighborhood_${regionId}_${districtId}`
+      }]);
+    }
+    
+    buttons.push([
+      {
+        text: language === 'ru' ? '◀️ Назад' : language === 'en' ? '◀️ Back' : '◀️ Orqaga',
+        callback_data: `group_back_district_${regionId}`
+      },
+      {
+        text: language === 'ru' ? '❌ Отмена' : language === 'en' ? '❌ Cancel' : '❌ Bekor qilish',
+        callback_data: 'cancel_group_reg'
+      }
+    ]);
+    
+    return {
+      reply_markup: {
+        inline_keyboard: buttons
+      }
+    };
+  }
+
+  static getOrganizationsInlineForGroup(organizations, language = 'uz') {
+    const buttons = organizations.map(org => [{
+      text: org.name,
+      callback_data: `group_org_${org.id}`
+    }]);
+    
+    buttons.push([
+      {
+        text: language === 'ru' ? '◀️ Назад' : language === 'en' ? '◀️ Back' : '◀️ Orqaga',
+        callback_data: 'group_back_org'
+      },
+      {
+        text: language === 'ru' ? '❌ Отмена' : language === 'en' ? '❌ Cancel' : '❌ Bekor qilish',
+        callback_data: 'cancel_group_reg'
+      }
+    ]);
+    
+    return {
+      reply_markup: {
+        inline_keyboard: buttons
+      }
+    };
+  }
 }
 
 module.exports = Keyboard;

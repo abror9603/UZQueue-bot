@@ -4,7 +4,11 @@ const organizationService = require('../services/organizationService');
 const telegramGroupService = require('../services/telegramGroupService');
 const appealService = require('../services/appealService');
 const aiService = require('../services/aiService');
+const moderationService = require('../services/moderationService');
+const spamProtectionService = require('../services/spamProtectionService');
+const userBehaviorService = require('../services/userBehaviorService');
 const stateService = require('../services/stateService');
+const ActionValidator = require('../middleware/actionValidator');
 const Keyboard = require('../utils/keyboard');
 const i18next = require('../config/i18n');
 const TelegramBot = require('node-telegram-bot-api');
@@ -54,6 +58,18 @@ class AppealHandlers {
     const step = await stateService.getStep(userId);
     const data = await stateService.getData(userId) || {};
 
+    // Check if user is blocked
+    const blocked = await spamProtectionService.checkBlocked(userId);
+    if (blocked.blocked) {
+      const unblockDate = new Date(blocked.unblockAt).toLocaleString(language === 'ru' ? 'ru-RU' : language === 'en' ? 'en-US' : 'uz-UZ');
+      await bot.sendMessage(chatId, 
+        t('user_blocked', { 
+          defaultValue: `❌ Siz vaqtinchalik bloklangansiz. Blokdan chiqish: ${unblockDate}` 
+        })
+      );
+      return;
+    }
+
     // Handle cancel
     if (text === t('cancel') || text === '❌ Bekor qilish') {
       await stateService.clear(userId);
@@ -65,6 +81,16 @@ class AppealHandlers {
     if (text === t('back') || text === '◀️ Orqaga') {
       await this.handleBack(bot, msg, step, data, language);
       return;
+    }
+
+    // Action validation based on step
+    const expectedAction = this._getExpectedAction(step);
+    if (expectedAction) {
+      const validation = ActionValidator.validate(msg, expectedAction, language);
+      if (!validation.valid) {
+        await bot.sendMessage(chatId, validation.error);
+        return;
+      }
     }
 
     switch (step) {
@@ -101,6 +127,17 @@ class AppealHandlers {
       default:
         break;
     }
+  }
+
+  _getExpectedAction(step) {
+    const actionMap = {
+      'enter_name': 'text',
+      'enter_phone': 'text',
+      'enter_appeal_type': 'text',
+      'enter_appeal_text': 'text',
+      'upload_file': 'file'
+    };
+    return actionMap[step] || null;
   }
 
   async handleRegionSelection(bot, msg, text, data, language) {
@@ -216,17 +253,19 @@ class AppealHandlers {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
 
-    if (!text || text.length < 3) {
-      await bot.sendMessage(chatId, '❌ Ism va familiya kamida 3 ta belgi bo\'lishi kerak');
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    // Validate name
+    const nameValidation = ActionValidator.validateName(text, language);
+    if (!nameValidation.valid) {
+      await bot.sendMessage(chatId, nameValidation.error);
       return;
     }
 
-    data.fullName = text;
+    data.fullName = text.trim();
     await stateService.setData(userId, data);
     await stateService.setStep(userId, 'enter_phone');
-
-    i18next.changeLanguage(language);
-    const t = i18next.t;
     
     await bot.sendMessage(
       chatId,
@@ -239,19 +278,19 @@ class AppealHandlers {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
 
-    // Basic phone validation
-    const phoneRegex = /^\+998\d{9}$/;
-    if (!phoneRegex.test(text)) {
-      await bot.sendMessage(chatId, '❌ Telefon raqam noto\'g\'ri. Format: +998901234567');
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    // Validate phone
+    const phoneValidation = ActionValidator.validatePhone(text, language);
+    if (!phoneValidation.valid) {
+      await bot.sendMessage(chatId, phoneValidation.error);
       return;
     }
 
-    data.phone = text;
+    data.phone = text.trim();
     await stateService.setData(userId, data);
     await stateService.setStep(userId, 'enter_appeal_type');
-
-    i18next.changeLanguage(language);
-    const t = i18next.t;
     
     await bot.sendMessage(
       chatId,
@@ -282,17 +321,50 @@ class AppealHandlers {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
 
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
     if (!text || text.length < 10) {
-      await bot.sendMessage(chatId, '❌ Murojaat matni kamida 10 ta belgi bo\'lishi kerak');
+      await bot.sendMessage(chatId, t('validation_error_appeal_too_short', {
+        defaultValue: '❌ Murojaat matni kamida 10 ta belgi bo\'lishi kerak'
+      }));
+      return;
+    }
+
+    // Check if user wants AI to format the appeal
+    const wantsFormatting = text.toLowerCase().includes('yordam') || 
+                           text.toLowerCase().includes('yozib ber') ||
+                           text.toLowerCase().includes('rasmiy');
+
+    if (wantsFormatting) {
+      // Ask user if they want AI to format
+      data.originalAppealText = text;
+      data.needsFormatting = true;
+      await stateService.setData(userId, data);
+      
+      await bot.sendMessage(
+        chatId,
+        t('ai_format_question', {
+          defaultValue: '🤖 Murojaatingizni AI yordamida rasmiy formatda yozib beraymi?'
+        }),
+        {
+          reply_markup: {
+            inline_keyboard: [
+              [
+                { text: t('yes', { defaultValue: '✅ Ha' }), callback_data: 'format_appeal_yes' },
+                { text: t('no', { defaultValue: '❌ Yo\'q' }), callback_data: 'format_appeal_no' }
+              ]
+            ]
+          }
+        }
+      );
       return;
     }
 
     data.appealText = text;
+    data.needsFormatting = false;
     await stateService.setData(userId, data);
     await stateService.setStep(userId, 'upload_file');
-
-    i18next.changeLanguage(language);
-    const t = i18next.t;
     
     await bot.sendMessage(
       chatId,
@@ -379,6 +451,59 @@ class AppealHandlers {
     }
 
     try {
+      // Check rate limit
+      const rateLimit = await spamProtectionService.checkRateLimit(userId, 2, 60);
+      if (!rateLimit.allowed) {
+        const resetTime = new Date(rateLimit.resetAt).toLocaleTimeString(language === 'ru' ? 'ru-RU' : language === 'en' ? 'en-US' : 'uz-UZ');
+        await bot.sendMessage(chatId, 
+          t('rate_limit_exceeded', {
+            defaultValue: `❌ Juda tez-tez murojaat yuboryapsiz. Keyingi murojaat: ${resetTime}`
+          })
+        );
+        return;
+      }
+
+      // Check for spam
+      const spamCheck = await moderationService.checkSpam(data.appealText, userId);
+      if (spamCheck.isSpam) {
+        await bot.sendMessage(chatId, 
+          t('spam_detected', {
+            defaultValue: `❌ ${spamCheck.reason}. Iltimos, yangi murojaat yozing.`
+          })
+        );
+        return;
+      }
+
+      // AI Moderation
+      await bot.sendMessage(chatId, t('checking_appeal', { defaultValue: '🔍 Murojaatingiz tekshirilmoqda...' }));
+      
+      const moderation = await moderationService.moderateAppeal(data.appealText, userId);
+      
+      if (!moderation.approved) {
+        // Appeal rejected by AI
+        await userBehaviorService.logBehavior(userId, 'appeal_rejected', { reason: moderation.reason });
+        
+        await bot.sendMessage(chatId, 
+          t('appeal_rejected', {
+            defaultValue: `❌ Murojaatingiz qoidalarga mos emas.\n\nSabab: ${moderation.reason}\n\n${moderation.suggestion || 'Iltimos, rasmiy va mazmunli murojaat yozing.'}`
+          })
+        );
+
+        // If user has low rating, consider blocking
+        const rating = await userBehaviorService.getUserRating(userId);
+        if (rating.rating < 30) {
+          await spamProtectionService.blockUser(userId, 24);
+          await bot.sendMessage(chatId, 
+            t('user_blocked_temporary', {
+              defaultValue: '⚠️ Ko\'p murojaatlar rad etilgani uchun siz 24 soatga bloklangansiz.'
+            })
+          );
+        }
+
+        await stateService.clear(userId);
+        return;
+      }
+
       // Find telegram group for routing
       const telegramGroup = await telegramGroupService.findGroupForAppeal(
         data.regionId,
@@ -388,7 +513,17 @@ class AppealHandlers {
       );
 
       if (!telegramGroup) {
-        await bot.sendMessage(chatId, '❌ Ushbu hudud uchun Telegram guruh topilmadi. Iltimos, administrator bilan bog\'laning.');
+        await bot.sendMessage(chatId, t('group_not_found', {
+          defaultValue: '❌ Ushbu hudud uchun Telegram guruh topilmadi. Iltimos, administrator bilan bog\'laning.'
+        }));
+        return;
+      }
+
+      // Check if group subscription is active
+      if (telegramGroup.subscriptionStatus !== 'active') {
+        await bot.sendMessage(chatId, t('group_inactive', {
+          defaultValue: '❌ Ushbu tashkilot obunasi faol emas. Murojaat qabul qilinmaydi.'
+        }));
         return;
       }
 
@@ -413,8 +548,15 @@ class AppealHandlers {
         }
       }
 
+      // Record appeal submission
+      await spamProtectionService.recordAppeal(userId);
+      await userBehaviorService.logBehavior(userId, 'appeal_submitted', { appealId: appeal.id });
+
       // Send to Telegram group
-      await this.sendAppealToGroup(bot, appeal, telegramGroup, language);
+      const groupMessage = await this.sendAppealToGroup(bot, appeal, telegramGroup, language);
+
+      // Save group message ID
+      await appealService.updateAppeal(appeal.id, { groupMessageId: groupMessage.message_id });
 
       // Confirm to user
       const location = await locationService.getLocationString(
@@ -458,15 +600,23 @@ class AppealHandlers {
     const org = await organizationService.getOrganizationById(appeal.organizationId);
     const orgName = language === 'ru' ? org.nameRu : language === 'en' ? org.nameEn : org.nameUz;
 
+    const statusText = {
+      uz: { pending: 'Jarayonda', completed: 'Bajarildi', rejected: 'Rad etildi' },
+      ru: { pending: 'В процессе', completed: 'Выполнено', rejected: 'Отклонено' },
+      en: { pending: 'Pending', completed: 'Completed', rejected: 'Rejected' }
+    };
+
+    const status = statusText[language]?.[appeal.status] || appeal.status;
+
     const message = `📌 Murojaat ID: #${appeal.appealId}\n\n` +
       `📍 Hudud: ${location}\n` +
       `🏛 Tashkilot: ${orgName}\n` +
       `👤 Fuqaro: ${appeal.fullName}\n` +
       `📞 Telefon: ${appeal.phone}\n` +
-      `📝 Holat: Jarayonda\n\n` +
+      `📝 Holat: ${status}\n\n` +
       `📄 Murojaat matni:\n${appeal.appealText}`;
 
-    await bot.sendMessage(chatId, message);
+    return await bot.sendMessage(chatId, message);
   }
 
   async continueToOrganizationSelection(bot, msg, userId, data, language) {
