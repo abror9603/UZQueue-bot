@@ -78,8 +78,20 @@ class CallbackHandlers {
     }
 
     // Handle group registration callbacks
+    if (data.startsWith('group_category_')) {
+      await this.handleGroupCategorySelection(bot, callbackQuery, data);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
+    }
+
     if (data.startsWith('group_type_')) {
       await this.handleGroupTypeSelection(bot, callbackQuery, data);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
+    }
+
+    if (data === 'group_back_to_category') {
+      await this.handleGroupBackToCategory(bot, callbackQuery);
       await bot.answerCallbackQuery(callbackQuery.id);
       return;
     }
@@ -121,7 +133,13 @@ class CallbackHandlers {
     }
 
     if (data === 'group_back_region') {
-      await this.handleGroupBackToRegion(bot, callbackQuery);
+      await this.handleGroupBackToType(bot, callbackQuery);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
+    }
+
+    if (data === 'group_back_to_type') {
+      await this.handleGroupBackToType(bot, callbackQuery);
       await bot.answerCallbackQuery(callbackQuery.id);
       return;
     }
@@ -161,6 +179,148 @@ class CallbackHandlers {
       await bot.answerCallbackQuery(callbackQuery.id);
       return;
     }
+  }
+
+  async handleGroupCategorySelection(bot, callbackQuery, data) {
+    const msg = callbackQuery.message;
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id;
+
+    const stateData = await stateService.getData(userId) || {};
+    const category = data.replace('group_category_', '');
+    stateData.category = category;
+    await stateService.setData(userId, stateData);
+    await stateService.setStep(userId, 'group_reg_select_type');
+
+    // Define organization types for each category
+    const categoryTypes = {
+      mahalliy: [
+        { text: '🏛 Viloyat hokimiyati', callback: 'group_type_viloyat' },
+        { text: '🏛 Tuman hokimiyati', callback: 'group_type_tuman' },
+        { text: '🏛 Shahar hokimiyati', callback: 'group_type_shahar' },
+        { text: '🏘 Mahalla', callback: 'group_type_mahalla' }
+      ],
+      qomitalar: [
+        { text: '📊 Davlat statistika qo\'mitasi', callback: 'group_type_qomita_statistika' },
+        { text: '💰 Davlat soliq qo\'mitasi', callback: 'group_type_qomita_soliq' },
+        { text: '📦 Davlat bojxona qo\'mitasi', callback: 'group_type_qomita_bojxona' },
+        { text: '🌿 Ekologiya va atrof-muhitni muhofaza qilish davlat qo\'mitasi', callback: 'group_type_qomita_ekologiya' },
+        { text: '⛏️ Davlat geologiya va mineral resurslar qo\'mitasi', callback: 'group_type_qomita_geologiya' },
+        { text: '🗺️ Yer resurslari, geodeziya, kartografiya va davlat kadastri bo\'yicha Davlat qo\'mitasi', callback: 'group_type_qomita_yer' },
+        { text: '✈️ Turizmni rivojlantirish davlat qo\'mitasi', callback: 'group_type_qomita_turizm' },
+        { text: '💼 Investitsiyalar bo\'yicha davlat qo\'mitasi', callback: 'group_type_qomita_investitsiya' },
+        { text: '🌳 O\'rmon xo\'jaligi davlat qo\'mitasi', callback: 'group_type_qomita_urmon' },
+        { text: '🐄 Davlat veterinariya qo\'mitasi', callback: 'group_type_qomita_veterinariya' },
+        { text: '⚙️ Sanoat xavfsizligi davlat qo\'mitasi', callback: 'group_type_qomita_sanoat' }
+      ],
+      vazirliklar: [
+        { text: '💼 Iqtisodiyot va sanoat vazirligi', callback: 'group_type_vazirlik_iqtisodiyot' },
+        { text: '💰 Moliya vazirligi', callback: 'group_type_vazirlik_moliya' },
+        { text: '👔 Bandlik va mehnat munosabatlari vazirligi', callback: 'group_type_vazirlik_bandlik' },
+        { text: '🎓 Oliy va o\'rta maxsus ta\'lim vazirligi', callback: 'group_type_vazirlik_oliy' },
+        { text: '📚 Xalq ta\'limi vazirligi', callback: 'group_type_vazirlik_xalq' },
+        { text: '🏥 Sog\'liqni saqlash vazirligi', callback: 'group_type_vazirlik_soglik' },
+        { text: '👮 Ichki ishlar vazirligi', callback: 'group_type_vazirlik_ichki' },
+        { text: '🛡️ Mudofaa vazirligi', callback: 'group_type_vazirlik_mudofaa' },
+        { text: '🚨 Favqulodda vaziyatlar vazirligi', callback: 'group_type_vazirlik_favqulodda' },
+        { text: '🌍 Tashqi ishlar vazirligi', callback: 'group_type_vazirlik_tashqi' },
+        { text: '💱 Investitsiyalar va tashqi savdo vazirligi', callback: 'group_type_vazirlik_investitsiya' },
+        { text: '⚖️ Adliya vazirligi', callback: 'group_type_vazirlik_adliya' },
+        { text: '🎭 Madaniyat vazirligi', callback: 'group_type_vazirlik_madaniyat' },
+        { text: '💻 Axborot texnologiyalari va kommunikatsiyalarini rivojlantirish vazirligi', callback: 'group_type_vazirlik_axborot' },
+        { text: '🏠 Uy-joy kommunal xizmat ko\'rsatish vazirligi', callback: 'group_type_vazirlik_uyjoy' },
+        { text: '👶 Maktabgacha ta\'lim vazirligi', callback: 'group_type_vazirlik_maktabgacha' },
+        { text: '🚀 Innovatsion rivojlanish vazirligi', callback: 'group_type_vazirlik_innovatsiya' },
+        { text: '⚽ Sportni rivojlantirish vazirligi', callback: 'group_type_vazirlik_sport' },
+        { text: '✈️ Turizm va madaniy meros vazirligi', callback: 'group_type_vazirlik_turizm' },
+        { text: '🏗️ Qurilish vazirligi', callback: 'group_type_vazirlik_qurilish' },
+        { text: '🌾 Qishloq xo\'jaligi vazirligi', callback: 'group_type_vazirlik_qishloq' },
+        { text: '💧 Suv xo\'jaligi vazirligi', callback: 'group_type_vazirlik_suv' },
+        { text: '⚡ Energetika vazirligi', callback: 'group_type_vazirlik_energetika' },
+        { text: '👨‍👩‍👧‍👦 Mahalla va oilani qo\'llab-quvvatlash vazirligi', callback: 'group_type_vazirlik_mahalla' }
+      ],
+      xususiy: [
+        { text: '🏢 Xususiy tashkilot', callback: 'group_type_xususiy' }
+      ]
+    };
+
+    const categoryNames = {
+      mahalliy: 'Mahalliy davlat hokimiyati organlari',
+      qomitalar: 'Davlat Qo\'mitalari',
+      vazirliklar: 'Vazirliklar',
+      xususiy: 'Xususiy tashkilotlar'
+    };
+
+    const types = categoryTypes[category] || [];
+    const categoryName = categoryNames[category] || category;
+
+    const inlineKeyboard = types.map(type => [
+      { text: type.text, callback_data: type.callback }
+    ]);
+    inlineKeyboard.push([
+      { text: '◀️ Orqaga', callback_data: 'group_back_to_category' },
+      { text: '❌ Bekor qilish', callback_data: 'cancel_group_reg' }
+    ]);
+
+    await bot.editMessageText(
+      `📝 ${categoryName}\n\n2️⃣ Tashkilot turini tanlang:`,
+      {
+        chat_id: chatId,
+        message_id: msg.message_id,
+        reply_markup: {
+          inline_keyboard: inlineKeyboard
+        }
+      }
+    );
+  }
+
+  async handleGroupBackToCategory(bot, callbackQuery) {
+    const msg = callbackQuery.message;
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id;
+
+    const stateData = await stateService.getData(userId) || {};
+    delete stateData.category;
+    delete stateData.groupType;
+    await stateService.setData(userId, stateData);
+    await stateService.setStep(userId, 'group_reg_select_category');
+
+    await bot.editMessageText(
+      "📝 Guruhni ro'yxatdan o'tkazish\n\n" + "1️⃣ Tashkilot kategoriyasini tanlang:",
+      {
+        chat_id: chatId,
+        message_id: msg.message_id,
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "🏛 Mahalliy davlat hokimiyati organlari",
+                callback_data: "group_category_mahalliy",
+              },
+            ],
+            [
+              {
+                text: "🏛 Davlat Qo'mitalari",
+                callback_data: "group_category_qomitalar",
+              },
+            ],
+            [
+              {
+                text: "🏛 Vazirliklar",
+                callback_data: "group_category_vazirliklar",
+              },
+            ],
+            [
+              {
+                text: "🏢 Xususiy tashkilotlar",
+                callback_data: "group_category_xususiy",
+              },
+            ],
+            [{ text: "❌ Bekor qilish", callback_data: "cancel_group_reg" }],
+          ],
+        },
+      }
+    );
   }
 
   async handleGroupTypeSelection(bot, callbackQuery, data) {
@@ -403,10 +563,24 @@ class CallbackHandlers {
       'tuman': 'hokimiyat',
       'shahar': 'hokimiyat',
       'mahalla': 'mahalla',
-      'boshqa': 'other'
+      'boshqa': 'other',
+      'qomita': 'committee',
+      'vazirlik': 'ministry',
+      'xususiy': 'private'
     };
 
-    const orgType = orgTypeMap[groupType] || 'other';
+    // Handle all qomita types (they all map to 'committee')
+    let orgType = orgTypeMap[groupType];
+    if (!orgType && groupType && groupType.startsWith('qomita_')) {
+      orgType = 'committee';
+    }
+    // Handle all vazirlik types (they all map to 'ministry')
+    if (!orgType && groupType && groupType.startsWith('vazirlik_')) {
+      orgType = 'ministry';
+    }
+    if (!orgType) {
+      orgType = 'other';
+    }
     
     // Get organizations filtered by type
     const allOrgs = await organizationService.getAllOrganizations('uz');
@@ -470,6 +644,101 @@ class CallbackHandlers {
             [{ text: '◀️ Orqaga', callback_data: 'group_back_org' }],
             [{ text: '❌ Bekor qilish', callback_data: 'cancel_group_reg' }]
           ]
+        }
+      }
+    );
+  }
+
+  async handleGroupBackToType(bot, callbackQuery) {
+    const msg = callbackQuery.message;
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id;
+
+    const stateData = await stateService.getData(userId) || {};
+    const category = stateData.category;
+    delete stateData.regionId;
+    delete stateData.districtId;
+    delete stateData.neighborhoodId;
+    await stateService.setData(userId, stateData);
+    await stateService.setStep(userId, 'group_reg_select_type');
+
+    // Define organization types for each category
+    const categoryTypes = {
+      mahalliy: [
+        { text: '🏛 Viloyat hokimiyati', callback: 'group_type_viloyat' },
+        { text: '🏛 Tuman hokimiyati', callback: 'group_type_tuman' },
+        { text: '🏛 Shahar hokimiyati', callback: 'group_type_shahar' },
+        { text: '🏘 Mahalla', callback: 'group_type_mahalla' }
+      ],
+      qomitalar: [
+        { text: '📊 Davlat statistika qo\'mitasi', callback: 'group_type_qomita_statistika' },
+        { text: '💰 Davlat soliq qo\'mitasi', callback: 'group_type_qomita_soliq' },
+        { text: '📦 Davlat bojxona qo\'mitasi', callback: 'group_type_qomita_bojxona' },
+        { text: '🌿 Ekologiya va atrof-muhitni muhofaza qilish davlat qo\'mitasi', callback: 'group_type_qomita_ekologiya' },
+        { text: '⛏️ Davlat geologiya va mineral resurslar qo\'mitasi', callback: 'group_type_qomita_geologiya' },
+        { text: '🗺️ Yer resurslari, geodeziya, kartografiya va davlat kadastri bo\'yicha Davlat qo\'mitasi', callback: 'group_type_qomita_yer' },
+        { text: '✈️ Turizmni rivojlantirish davlat qo\'mitasi', callback: 'group_type_qomita_turizm' },
+        { text: '💼 Investitsiyalar bo\'yicha davlat qo\'mitasi', callback: 'group_type_qomita_investitsiya' },
+        { text: '🌳 O\'rmon xo\'jaligi davlat qo\'mitasi', callback: 'group_type_qomita_urmon' },
+        { text: '🐄 Davlat veterinariya qo\'mitasi', callback: 'group_type_qomita_veterinariya' },
+        { text: '⚙️ Sanoat xavfsizligi davlat qo\'mitasi', callback: 'group_type_qomita_sanoat' }
+      ],
+      vazirliklar: [
+        { text: '💼 Iqtisodiyot va sanoat vazirligi', callback: 'group_type_vazirlik_iqtisodiyot' },
+        { text: '💰 Moliya vazirligi', callback: 'group_type_vazirlik_moliya' },
+        { text: '👔 Bandlik va mehnat munosabatlari vazirligi', callback: 'group_type_vazirlik_bandlik' },
+        { text: '🎓 Oliy va o\'rta maxsus ta\'lim vazirligi', callback: 'group_type_vazirlik_oliy' },
+        { text: '📚 Xalq ta\'limi vazirligi', callback: 'group_type_vazirlik_xalq' },
+        { text: '🏥 Sog\'liqni saqlash vazirligi', callback: 'group_type_vazirlik_soglik' },
+        { text: '👮 Ichki ishlar vazirligi', callback: 'group_type_vazirlik_ichki' },
+        { text: '🛡️ Mudofaa vazirligi', callback: 'group_type_vazirlik_mudofaa' },
+        { text: '🚨 Favqulodda vaziyatlar vazirligi', callback: 'group_type_vazirlik_favqulodda' },
+        { text: '🌍 Tashqi ishlar vazirligi', callback: 'group_type_vazirlik_tashqi' },
+        { text: '💱 Investitsiyalar va tashqi savdo vazirligi', callback: 'group_type_vazirlik_investitsiya' },
+        { text: '⚖️ Adliya vazirligi', callback: 'group_type_vazirlik_adliya' },
+        { text: '🎭 Madaniyat vazirligi', callback: 'group_type_vazirlik_madaniyat' },
+        { text: '💻 Axborot texnologiyalari va kommunikatsiyalarini rivojlantirish vazirligi', callback: 'group_type_vazirlik_axborot' },
+        { text: '🏠 Uy-joy kommunal xizmat ko\'rsatish vazirligi', callback: 'group_type_vazirlik_uyjoy' },
+        { text: '👶 Maktabgacha ta\'lim vazirligi', callback: 'group_type_vazirlik_maktabgacha' },
+        { text: '🚀 Innovatsion rivojlanish vazirligi', callback: 'group_type_vazirlik_innovatsiya' },
+        { text: '⚽ Sportni rivojlantirish vazirligi', callback: 'group_type_vazirlik_sport' },
+        { text: '✈️ Turizm va madaniy meros vazirligi', callback: 'group_type_vazirlik_turizm' },
+        { text: '🏗️ Qurilish vazirligi', callback: 'group_type_vazirlik_qurilish' },
+        { text: '🌾 Qishloq xo\'jaligi vazirligi', callback: 'group_type_vazirlik_qishloq' },
+        { text: '💧 Suv xo\'jaligi vazirligi', callback: 'group_type_vazirlik_suv' },
+        { text: '⚡ Energetika vazirligi', callback: 'group_type_vazirlik_energetika' },
+        { text: '👨‍👩‍👧‍👦 Mahalla va oilani qo\'llab-quvvatlash vazirligi', callback: 'group_type_vazirlik_mahalla' }
+      ],
+      xususiy: [
+        { text: '🏢 Xususiy tashkilot', callback: 'group_type_xususiy' }
+      ]
+    };
+
+    const categoryNames = {
+      mahalliy: 'Mahalliy davlat hokimiyati organlari',
+      qomitalar: 'Davlat Qo\'mitalari',
+      vazirliklar: 'Vazirliklar',
+      xususiy: 'Xususiy tashkilotlar'
+    };
+
+    const types = categoryTypes[category] || [];
+    const categoryName = categoryNames[category] || category;
+
+    const inlineKeyboard = types.map(type => [
+      { text: type.text, callback_data: type.callback }
+    ]);
+    inlineKeyboard.push([
+      { text: '◀️ Orqaga', callback_data: 'group_back_to_category' },
+      { text: '❌ Bekor qilish', callback_data: 'cancel_group_reg' }
+    ]);
+
+    await bot.editMessageText(
+      `📝 ${categoryName}\n\n2️⃣ Tashkilot turini tanlang:`,
+      {
+        chat_id: chatId,
+        message_id: msg.message_id,
+        reply_markup: {
+          inline_keyboard: inlineKeyboard
         }
       }
     );

@@ -85,7 +85,7 @@ class GroupRegistrationHandlers {
     const t = i18next.t;
 
     // Store registration data
-    await stateService.setStep(userId, "group_reg_select_type");
+    await stateService.setStep(userId, "group_reg_select_category");
     await stateService.setData(userId, {
       groupChatId: groupChatId.toString(),
       groupTitle: (await bot.getChat(groupChatId)).title,
@@ -93,28 +93,33 @@ class GroupRegistrationHandlers {
 
     await bot.sendMessage(
       chatId,
-      "📝 Guruhni ro'yxatdan o'tkazish\n\n" + "1️⃣ Guruh turini tanlang:",
+      "📝 Guruhni ro'yxatdan o'tkazish\n\n" +
+        "1️⃣ Tashkilot kategoriyasini tanlang:",
       {
         reply_markup: {
           inline_keyboard: [
             [
               {
-                text: "🏛 Viloyat hokimiyati",
-                callback_data: "group_type_viloyat",
+                text: "🏛 Mahalliy davlat hokimiyati organlari",
+                callback_data: "group_category_mahalliy",
               },
             ],
-            [{ text: "🏛 Tuman hokimiyati", callback_data: "group_type_tuman" }],
             [
               {
-                text: "🏛 Shahar hokimiyati",
-                callback_data: "group_type_shahar",
+                text: "🏛 Davlat Qo'mitalari",
+                callback_data: "group_category_qomitalar",
               },
             ],
-            [{ text: "🏘 Mahalla", callback_data: "group_type_mahalla" }],
             [
               {
-                text: "🏢 Boshqa davlat tashkiloti",
-                callback_data: "group_type_boshqa",
+                text: "🏛 Vazirliklar",
+                callback_data: "group_category_vazirliklar",
+              },
+            ],
+            [
+              {
+                text: "🏢 Xususiy tashkilotlar",
+                callback_data: "group_category_xususiy",
               },
             ],
             [{ text: "❌ Bekor qilish", callback_data: "cancel_group_reg" }],
@@ -172,6 +177,18 @@ class GroupRegistrationHandlers {
    * Get next step based on organization type
    */
   getNextStepAfterRegion(groupType, regionId) {
+    // Handle all qomita types (they all follow the same logic)
+    if (groupType && groupType.startsWith("qomita_")) {
+      // State Committees: District optional
+      return "group_reg_select_district_optional";
+    }
+
+    // Handle all vazirlik types (they all follow the same logic)
+    if (groupType && groupType.startsWith("vazirlik_")) {
+      // Ministries: District optional
+      return "group_reg_select_district_optional";
+    }
+
     switch (groupType) {
       case "viloyat":
         // Region Government: Only region needed, skip to organization
@@ -183,6 +200,13 @@ class GroupRegistrationHandlers {
       case "mahalla":
         // Neighborhood: Need district, then neighborhood
         return "group_reg_select_district";
+      case "qomita":
+      case "vazirlik":
+        // State Committees and Ministries: District optional
+        return "group_reg_select_district_optional";
+      case "xususiy":
+        // Private organization: District optional, then organization name
+        return "group_reg_select_district_optional";
       case "boshqa":
         // Other: District optional, then organization name
         return "group_reg_select_district_optional";
@@ -195,6 +219,18 @@ class GroupRegistrationHandlers {
    * Get next step after district based on organization type
    */
   getNextStepAfterDistrict(groupType) {
+    // Handle all qomita types (they all follow the same logic)
+    if (groupType && groupType.startsWith("qomita_")) {
+      // State Committees: Skip to organization
+      return "group_reg_select_organization";
+    }
+
+    // Handle all vazirlik types (they all follow the same logic)
+    if (groupType && groupType.startsWith("vazirlik_")) {
+      // Ministries: Skip to organization
+      return "group_reg_select_organization";
+    }
+
     switch (groupType) {
       case "tuman":
         // District Government: Skip to organization
@@ -205,8 +241,13 @@ class GroupRegistrationHandlers {
       case "mahalla":
         // Neighborhood: Must select neighborhood
         return "group_reg_select_neighborhood";
+      case "qomita":
+      case "vazirlik":
+        // State Committees and Ministries: Skip to organization
+        return "group_reg_select_organization";
+      case "xususiy":
       case "boshqa":
-        // Other: Ask for organization name
+        // Private/Other: Ask for organization name
         return "group_reg_enter_org_name";
       default:
         return "group_reg_select_organization";
@@ -344,19 +385,68 @@ class GroupRegistrationHandlers {
         }
       }
 
-      // Get group type name
+      // Get category and type names
+      const categoryNames = {
+        mahalliy: "Mahalliy davlat hokimiyati organlari",
+        qomitalar: "Davlat Qo'mitalari",
+        vazirliklar: "Vazirliklar",
+        xususiy: "Xususiy tashkilotlar",
+      };
       const typeNames = {
         viloyat: "Viloyat hokimiyati",
         tuman: "Tuman hokimiyati",
         shahar: "Shahar hokimiyati",
         mahalla: "Mahalla",
+        qomita: "Davlat Qo'mitasi",
+        qomita_statistika: "Davlat statistika qo'mitasi",
+        qomita_soliq: "Davlat soliq qo'mitasi",
+        qomita_bojxona: "Davlat bojxona qo'mitasi",
+        qomita_ekologiya:
+          "Ekologiya va atrof-muhitni muhofaza qilish davlat qo'mitasi",
+        qomita_geologiya: "Davlat geologiya va mineral resurslar qo'mitasi",
+        qomita_yer:
+          "Yer resurslari, geodeziya, kartografiya va davlat kadastri bo'yicha Davlat qo'mitasi",
+        qomita_turizm: "Turizmni rivojlantirish davlat qo'mitasi",
+        qomita_investitsiya: "Investitsiyalar bo'yicha davlat qo'mitasi",
+        qomita_urmon: "O'rmon xo'jaligi davlat qo'mitasi",
+        qomita_veterinariya: "Davlat veterinariya qo'mitasi",
+        qomita_sanoat: "Sanoat xavfsizligi davlat qo'mitasi",
+        vazirlik: "Vazirlik",
+        vazirlik_iqtisodiyot: "Iqtisodiyot va sanoat vazirligi",
+        vazirlik_moliya: "Moliya vazirligi",
+        vazirlik_bandlik: "Bandlik va mehnat munosabatlari vazirligi",
+        vazirlik_oliy: "Oliy va o'rta maxsus ta'lim vazirligi",
+        vazirlik_xalq: "Xalq ta'limi vazirligi",
+        vazirlik_soglik: "Sog'liqni saqlash vazirligi",
+        vazirlik_ichki: "Ichki ishlar vazirligi",
+        vazirlik_mudofaa: "Mudofaa vazirligi",
+        vazirlik_favqulodda: "Favqulodda vaziyatlar vazirligi",
+        vazirlik_tashqi: "Tashqi ishlar vazirligi",
+        vazirlik_investitsiya: "Investitsiyalar va tashqi savdo vazirligi",
+        vazirlik_adliya: "Adliya vazirligi",
+        vazirlik_madaniyat: "Madaniyat vazirligi",
+        vazirlik_axborot:
+          "Axborot texnologiyalari va kommunikatsiyalarini rivojlantirish vazirligi",
+        vazirlik_uyjoy: "Uy-joy kommunal xizmat ko'rsatish vazirligi",
+        vazirlik_maktabgacha: "Maktabgacha ta'lim vazirligi",
+        vazirlik_innovatsiya: "Innovatsion rivojlanish vazirligi",
+        vazirlik_sport: "Sportni rivojlantirish vazirligi",
+        vazirlik_turizm: "Turizm va madaniy meros vazirligi",
+        vazirlik_qurilish: "Qurilish vazirligi",
+        vazirlik_qishloq: "Qishloq xo'jaligi vazirligi",
+        vazirlik_suv: "Suv xo'jaligi vazirligi",
+        vazirlik_energetika: "Energetika vazirligi",
+        vazirlik_mahalla: "Mahalla va oilani qo'llab-quvvatlash vazirligi",
+        xususiy: "Xususiy tashkilot",
         boshqa: "Boshqa davlat tashkiloti",
       };
+      const categoryName = categoryNames[data.category] || "";
       const typeName = typeNames[data.groupType] || data.groupType;
 
       const confirmationText =
         "📋 Ro'yxatdan o'tkazish ma'lumotlari:\n\n" +
-        `🏛 Guruh turi: ${typeName}\n` +
+        (categoryName ? `📂 Kategoriya: ${categoryName}\n` : "") +
+        `🏛 Tashkilot turi: ${typeName}\n` +
         `📍 Hudud: ${locationStr}\n` +
         `🏢 Tashkilot: ${orgName}\n` +
         `👤 Mas'ul shaxs: ${data.responsiblePerson}\n` +
@@ -397,16 +487,32 @@ class GroupRegistrationHandlers {
       const administrators = await bot.getChatAdministrators(groupChatId);
       const adminIds = administrators.map((admin) => admin.user.id);
 
-      // Handle organization: if organizationName is provided (for "boshqa" type), create organization entry
+      // Handle organization: if organizationName is provided (for "boshqa", "xususiy", "qomita", "vazirlik" types), create organization entry
       let organizationId = data.organizationId;
       if (data.organizationName && !organizationId) {
-        // Create a new organization entry for "other" type
+        // Determine organization type based on group type
+        let orgType = "other";
+        if (data.groupType === "xususiy") {
+          orgType = "private";
+        } else if (data.groupType && data.groupType.startsWith("qomita_")) {
+          // All qomita types are committees
+          orgType = "committee";
+        } else if (data.groupType === "qomita") {
+          orgType = "committee";
+        } else if (data.groupType && data.groupType.startsWith("vazirlik_")) {
+          // All vazirlik types are ministries
+          orgType = "ministry";
+        } else if (data.groupType === "vazirlik") {
+          orgType = "ministry";
+        }
+
+        // Create a new organization entry
         const newOrg = await Organization.create({
           nameUz: data.organizationName,
           nameRu: data.organizationName,
           nameEn: data.organizationName,
           code: `CUSTOM_${Date.now()}`,
-          type: "other",
+          type: orgType,
           isActive: true,
         });
         organizationId = newOrg.id;

@@ -224,10 +224,16 @@ class Keyboard {
       callback_data: `group_region_${region.id}`
     }]);
     
-    buttons.push([{
-      text: language === 'ru' ? '❌ Отмена' : language === 'en' ? '❌ Cancel' : '❌ Bekor qilish',
-      callback_data: 'cancel_group_reg'
-    }]);
+    buttons.push([
+      {
+        text: language === 'ru' ? '◀️ Назад' : language === 'en' ? '◀️ Back' : '◀️ Orqaga',
+        callback_data: 'group_back_region'
+      },
+      {
+        text: language === 'ru' ? '❌ Отмена' : language === 'en' ? '❌ Cancel' : '❌ Bekor qilish',
+        callback_data: 'cancel_group_reg'
+      }
+    ]);
     
     return {
       reply_markup: {
