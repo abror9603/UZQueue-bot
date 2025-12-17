@@ -30,16 +30,16 @@ class AppealHandlers {
 
     // Reset state
     await stateService.clear(userId);
-    await stateService.setStep(userId, 'select_region');
+    await stateService.setStep(userId, 'select_appeal_org_type');
     await stateService.setData(userId, {});
 
-    // Get regions
-    const regions = await locationService.getAllRegions(language);
-    
+    // Show organization type selection
     await bot.sendMessage(
       chatId,
-      t('select_region'),
-      Keyboard.getRegionsInline(regions, language)
+      t('select_appeal_org_type', { 
+        defaultValue: '📋 Murojaat qaysi tashkilotga yuborilmoqda?\n\nTashkilot turini tanlang:' 
+      }),
+      Keyboard.getAppealOrgTypeSelection(language)
     );
   }
 
@@ -70,6 +70,12 @@ class AppealHandlers {
       return;
     }
 
+    // Handle skip (for file upload step)
+    if (step === 'upload_file' && (text === '/skip' || text === t('skip') || text?.toLowerCase().includes('skip') || text === '⏭ O\'tkazib yuborish')) {
+      await this.handleFileUpload(bot, msg, data, language);
+      return;
+    }
+
     // Handle cancel
     if (text === t('cancel') || text === '❌ Bekor qilish') {
       await stateService.clear(userId);
@@ -94,9 +100,13 @@ class AppealHandlers {
     }
 
     switch (step) {
+      case 'select_appeal_org_type':
+        // Organization type selection is handled via callback
+        return false;
       case 'select_region':
-        await this.handleRegionSelection(bot, msg, text, data, language);
-        break;
+      case 'select_region_optional':
+        // Region selection is handled via callback
+        return false;
       case 'select_district':
         await this.handleDistrictSelection(bot, msg, text, data, language);
         break;
@@ -377,8 +387,12 @@ class AppealHandlers {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
 
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
     // If skip, go to confirmation
-    if (msg.text === '/skip' || msg.text?.includes('skip')) {
+    const text = msg.text?.trim() || '';
+    if (text === '/skip' || text === t('skip') || text?.toLowerCase().includes('skip') || text === '⏭ O\'tkazib yuborish') {
       await this.showConfirmation(bot, msg, data, language);
       return;
     }
@@ -397,8 +411,18 @@ class AppealHandlers {
       });
       
       await stateService.setData(userId, data);
+      await bot.sendMessage(chatId, t('file_uploaded', { defaultValue: '✅ Fayl qabul qilindi' }));
     }
 
+    // If no file and not skip, show error
+    if (!msg.photo && !msg.document && text && text !== '/skip' && !text.toLowerCase().includes('skip')) {
+      await bot.sendMessage(chatId, t('invalid_file', { 
+        defaultValue: '❌ Iltimos, fayl yoki rasm yuboring, yoki /skip buyrug\'ini yuboring.' 
+      }));
+      return;
+    }
+
+    // Show confirmation after file upload or skip
     await this.showConfirmation(bot, msg, data, language);
   }
 
@@ -411,12 +435,18 @@ class AppealHandlers {
     i18next.changeLanguage(language);
     const t = i18next.t;
 
-    const location = await locationService.getLocationString(
-      data.regionId,
-      data.districtId,
-      data.neighborhoodId,
-      language
-    );
+    // Get location string (may be empty if location was skipped)
+    let location = '';
+    if (data.regionId || data.districtId || data.neighborhoodId) {
+      location = await locationService.getLocationString(
+        data.regionId,
+        data.districtId,
+        data.neighborhoodId,
+        language
+      );
+    } else {
+      location = language === 'ru' ? 'Худуд не указан' : language === 'en' ? 'Location not specified' : 'Hudud ko\'rsatilmagan';
+    }
 
     const org = await organizationService.getOrganizationById(data.organizationId);
     const orgName = language === 'ru' ? org.nameRu : language === 'en' ? org.nameEn : org.nameUz;
@@ -451,15 +481,50 @@ class AppealHandlers {
     }
 
     try {
-      // Check rate limit
-      const rateLimit = await spamProtectionService.checkRateLimit(userId, 2, 60);
+      // Check rate limit (2 appeals per 10 minutes)
+      const rateLimit = await spamProtectionService.checkRateLimit(userId, 2, 10);
       if (!rateLimit.allowed) {
-        const resetTime = new Date(rateLimit.resetAt).toLocaleTimeString(language === 'ru' ? 'ru-RU' : language === 'en' ? 'en-US' : 'uz-UZ');
-        await bot.sendMessage(chatId, 
-          t('rate_limit_exceeded', {
-            defaultValue: `❌ Juda tez-tez murojaat yuboryapsiz. Keyingi murojaat: ${resetTime}`
-          })
-        );
+        const resetAt = new Date(rateLimit.resetAt);
+        const now = new Date();
+        const minutesLeft = Math.ceil((resetAt - now) / (1000 * 60));
+        
+        // Format time message
+        let timeMessage = '';
+        if (minutesLeft <= 1) {
+          timeMessage = language === 'ru' ? '1 daqiqadan so\'ng' : language === 'en' ? 'in 1 minute' : '1 daqiqadan so\'ng';
+        } else {
+          timeMessage = language === 'ru' 
+            ? `${minutesLeft} daqiqadan so'ng` 
+            : language === 'en' 
+            ? `in ${minutesLeft} minutes` 
+            : `${minutesLeft} daqiqadan so'ng`;
+        }
+        
+        // Also show exact time
+        const exactTime = resetAt.toLocaleTimeString(language === 'ru' ? 'ru-RU' : language === 'en' ? 'en-US' : 'uz-UZ', {
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        const rateLimitMessage = language === 'ru'
+          ? `❌ Juda tez-tez murojaat yuboryapsiz.\n\n⏰ Keyingi murojaat: ${timeMessage} (${exactTime})`
+          : language === 'en'
+          ? `❌ You are sending requests too frequently.\n\n⏰ Next request: ${timeMessage} (${exactTime})`
+          : `❌ Juda tez-tez murojaat yuboryapsiz.\n\n⏰ Keyingi murojaat: ${timeMessage} (${exactTime})`;
+        
+        const sentMessage = await bot.sendMessage(chatId, rateLimitMessage);
+        
+        // Schedule message deletion after 10 minutes
+        const deleteAfter = minutesLeft * 60 * 1000; // Convert to milliseconds
+        setTimeout(async () => {
+          try {
+            await bot.deleteMessage(chatId, sentMessage.message_id);
+          } catch (error) {
+            // Message might already be deleted or not found
+            console.log('Could not delete rate limit message:', error.message);
+          }
+        }, deleteAfter);
+        
         return;
       }
 
@@ -505,9 +570,10 @@ class AppealHandlers {
       }
 
       // Find telegram group for routing
+      // Handle undefined values (when location was skipped)
       const telegramGroup = await telegramGroupService.findGroupForAppeal(
-        data.regionId,
-        data.districtId,
+        data.regionId || null,
+        data.districtId || null,
         data.neighborhoodId || null,
         data.organizationId
       );

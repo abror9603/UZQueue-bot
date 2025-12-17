@@ -9,7 +9,7 @@ const TelegramGroup = sequelize.define('TelegramGroup', {
   },
   regionId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true, // Can be null for private organizations
     references: {
       model: 'regions',
       key: 'id'

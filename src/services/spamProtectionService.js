@@ -68,7 +68,7 @@ class SpamProtectionService {
    */
   async recordAppeal(userId) {
     const key = `rate_limit:${userId}`;
-    const windowSeconds = 60 * 60; // 1 hour
+    const windowSeconds = 10 * 60; // 10 minutes
 
     try {
       const current = await redisClient.get(key);

@@ -88,11 +88,19 @@ class Keyboard {
     };
   }
 
-  static getDistrictsInline(districts, language = 'uz', regionId) {
+  static getDistrictsInline(districts, language = 'uz', regionId, optional = false) {
     const buttons = districts.map(district => [{
       text: district.name,
       callback_data: `district_${district.id}_${regionId}`
     }]);
+    
+    // Add skip button if optional
+    if (optional) {
+      buttons.push([{
+        text: language === 'ru' ? '⏭ Пропустить' : language === 'en' ? '⏭ Skip' : '⏭ O\'tkazib yuborish',
+        callback_data: `skip_district_${regionId}`
+      }]);
+    }
     
     // Add back and cancel buttons
     buttons.push([
@@ -321,6 +329,52 @@ class Keyboard {
       }
     ]);
     
+    return {
+      reply_markup: {
+        inline_keyboard: buttons
+      }
+    };
+  }
+
+  // Appeal Organization Type Selection
+  static getAppealOrgTypeSelection(language = 'uz') {
+    const types = {
+      uz: [
+        { text: '🏛 Hokimiyat', callback: 'appeal_org_type_hokimiyat' },
+        { text: '🏘 Mahalla', callback: 'appeal_org_type_mahalla' },
+        { text: '🏛 Vazirlik', callback: 'appeal_org_type_vazirlik' },
+        { text: '📊 Davlat Qo\'mitasi', callback: 'appeal_org_type_qomita' },
+        { text: '🏢 Xususiy tashkilot', callback: 'appeal_org_type_xususiy' },
+        { text: '🏢 Boshqa tashkilot', callback: 'appeal_org_type_other' }
+      ],
+      ru: [
+        { text: '🏛 Хокимият', callback: 'appeal_org_type_hokimiyat' },
+        { text: '🏘 Махалля', callback: 'appeal_org_type_mahalla' },
+        { text: '🏛 Министерство', callback: 'appeal_org_type_vazirlik' },
+        { text: '📊 Государственный Комитет', callback: 'appeal_org_type_qomita' },
+        { text: '🏢 Частная организация', callback: 'appeal_org_type_xususiy' },
+        { text: '🏢 Другая организация', callback: 'appeal_org_type_other' }
+      ],
+      en: [
+        { text: '🏛 Hokimiyat', callback: 'appeal_org_type_hokimiyat' },
+        { text: '🏘 Mahalla', callback: 'appeal_org_type_mahalla' },
+        { text: '🏛 Ministry', callback: 'appeal_org_type_vazirlik' },
+        { text: '📊 State Committee', callback: 'appeal_org_type_qomita' },
+        { text: '🏢 Private Organization', callback: 'appeal_org_type_xususiy' },
+        { text: '🏢 Other Organization', callback: 'appeal_org_type_other' }
+      ]
+    };
+
+    const buttons = (types[language] || types.uz).map(type => [{
+      text: type.text,
+      callback_data: type.callback
+    }]);
+
+    buttons.push([{
+      text: language === 'ru' ? '❌ Отмена' : language === 'en' ? '❌ Cancel' : '❌ Bekor qilish',
+      callback_data: 'cancel_appeal'
+    }]);
+
     return {
       reply_markup: {
         inline_keyboard: buttons

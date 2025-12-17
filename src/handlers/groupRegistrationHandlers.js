@@ -346,32 +346,36 @@ class GroupRegistrationHandlers {
 
   async showConfirmation(bot, chatId, data, userId) {
     try {
-      // Build location string
-      const regions = await locationService.getAllRegions("uz");
-      const selectedRegion = regions.find((r) => r.id === data.regionId);
-      let locationStr = selectedRegion ? selectedRegion.name : "";
+      // Build location string (skip for private organizations)
+      let locationStr = "";
+      if (data.groupType !== "xususiy") {
+        const regions = await locationService.getAllRegions("uz");
+        const selectedRegion = regions.find((r) => r.id === data.regionId);
+        locationStr = selectedRegion ? selectedRegion.name : "";
 
-      if (data.districtId) {
-        const districts = await locationService.getDistrictsByRegion(
-          data.regionId,
-          "uz"
-        );
-        const selectedDistrict = districts.find(
-          (d) => d.id === data.districtId
-        );
-        if (selectedDistrict) locationStr += ` → ${selectedDistrict.name}`;
-      }
+        if (data.districtId) {
+          const districts = await locationService.getDistrictsByRegion(
+            data.regionId,
+            "uz"
+          );
+          const selectedDistrict = districts.find(
+            (d) => d.id === data.districtId
+          );
+          if (selectedDistrict) locationStr += ` → ${selectedDistrict.name}`;
+        }
 
-      if (data.neighborhoodId) {
-        const neighborhoods = await locationService.getNeighborhoodsByDistrict(
-          data.districtId,
-          "uz"
-        );
-        const selectedNeighborhood = neighborhoods.find(
-          (n) => n.id === data.neighborhoodId
-        );
-        if (selectedNeighborhood)
-          locationStr += ` → ${selectedNeighborhood.name}`;
+        if (data.neighborhoodId) {
+          const neighborhoods =
+            await locationService.getNeighborhoodsByDistrict(
+              data.districtId,
+              "uz"
+            );
+          const selectedNeighborhood = neighborhoods.find(
+            (n) => n.id === data.neighborhoodId
+          );
+          if (selectedNeighborhood)
+            locationStr += ` → ${selectedNeighborhood.name}`;
+        }
       }
 
       // Get organization name
@@ -443,11 +447,17 @@ class GroupRegistrationHandlers {
       const categoryName = categoryNames[data.category] || "";
       const typeName = typeNames[data.groupType] || data.groupType;
 
-      const confirmationText =
+      let confirmationText =
         "📋 Ro'yxatdan o'tkazish ma'lumotlari:\n\n" +
         (categoryName ? `📂 Kategoriya: ${categoryName}\n` : "") +
-        `🏛 Tashkilot turi: ${typeName}\n` +
-        `📍 Hudud: ${locationStr}\n` +
+        `🏛 Tashkilot turi: ${typeName}\n`;
+
+      // Only show location for non-private organizations
+      if (data.groupType !== "xususiy" && locationStr) {
+        confirmationText += `📍 Hudud: ${locationStr}\n`;
+      }
+
+      confirmationText +=
         `🏢 Tashkilot: ${orgName}\n` +
         `👤 Mas'ul shaxs: ${data.responsiblePerson}\n` +
         `📞 Telefon: ${data.responsiblePhone}\n\n` +
@@ -530,32 +540,36 @@ class GroupRegistrationHandlers {
         throw new Error("Mahalla uchun tuman va mahalla tanlash majburiy");
       }
 
-      // Build location string for confirmation
-      const regions = await locationService.getAllRegions("uz");
-      const selectedRegion = regions.find((r) => r.id === data.regionId);
-      let locationStr = selectedRegion ? selectedRegion.name : "";
+      // Build location string for confirmation (skip for private organizations)
+      let locationStr = "";
+      if (groupType !== "xususiy") {
+        const regions = await locationService.getAllRegions("uz");
+        const selectedRegion = regions.find((r) => r.id === data.regionId);
+        locationStr = selectedRegion ? selectedRegion.name : "";
 
-      if (data.districtId) {
-        const districts = await locationService.getDistrictsByRegion(
-          data.regionId,
-          "uz"
-        );
-        const selectedDistrict = districts.find(
-          (d) => d.id === data.districtId
-        );
-        if (selectedDistrict) locationStr += ` → ${selectedDistrict.name}`;
-      }
+        if (data.districtId) {
+          const districts = await locationService.getDistrictsByRegion(
+            data.regionId,
+            "uz"
+          );
+          const selectedDistrict = districts.find(
+            (d) => d.id === data.districtId
+          );
+          if (selectedDistrict) locationStr += ` → ${selectedDistrict.name}`;
+        }
 
-      if (data.neighborhoodId) {
-        const neighborhoods = await locationService.getNeighborhoodsByDistrict(
-          data.districtId,
-          "uz"
-        );
-        const selectedNeighborhood = neighborhoods.find(
-          (n) => n.id === data.neighborhoodId
-        );
-        if (selectedNeighborhood)
-          locationStr += ` → ${selectedNeighborhood.name}`;
+        if (data.neighborhoodId) {
+          const neighborhoods =
+            await locationService.getNeighborhoodsByDistrict(
+              data.districtId,
+              "uz"
+            );
+          const selectedNeighborhood = neighborhoods.find(
+            (n) => n.id === data.neighborhoodId
+          );
+          if (selectedNeighborhood)
+            locationStr += ` → ${selectedNeighborhood.name}`;
+        }
       }
 
       // Get organization name
@@ -573,9 +587,10 @@ class GroupRegistrationHandlers {
       const telegramGroup = await TelegramGroup.create({
         chatId: groupChatId,
         chatTitle: data.groupTitle || chat.title,
-        regionId: data.regionId,
-        districtId: data.districtId || null,
-        neighborhoodId: data.neighborhoodId || null,
+        regionId: groupType === "xususiy" ? null : data.regionId,
+        districtId: groupType === "xususiy" ? null : data.districtId || null,
+        neighborhoodId:
+          groupType === "xususiy" ? null : data.neighborhoodId || null,
         organizationId: organizationId,
         adminIds: adminIds,
         responsiblePerson: data.responsiblePerson,

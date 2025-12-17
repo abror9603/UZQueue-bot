@@ -47,23 +47,41 @@ class LocationService {
   }
 
   async getLocationString(regionId, districtId, neighborhoodId, language = 'uz') {
-    const region = await this.getRegionById(regionId);
-    const district = await this.getDistrictById(districtId);
+    const parts = [];
     
-    let location = `${this._getName(region, language)} → ${this._getName(district, language)}`;
+    if (regionId) {
+      const region = await this.getRegionById(regionId);
+      if (region) {
+        parts.push(this._getName(region, language));
+      }
+    }
+    
+    if (districtId) {
+      const district = await this.getDistrictById(districtId);
+      if (district) {
+        parts.push(this._getName(district, language));
+      }
+    }
     
     if (neighborhoodId) {
       const neighborhood = await this.getNeighborhoodById(neighborhoodId);
-      location += ` → ${this._getName(neighborhood, language)}`;
+      if (neighborhood) {
+        parts.push(this._getName(neighborhood, language));
+      }
     }
     
-    return location;
+    if (parts.length === 0) {
+      return language === 'ru' ? 'Худуд не указан' : language === 'en' ? 'Location not specified' : 'Hudud ko\'rsatilmagan';
+    }
+    
+    return parts.join(' → ');
   }
 
   _getName(entity, language) {
-    if (language === 'ru') return entity.nameRu;
-    if (language === 'en') return entity.nameEn;
-    return entity.nameUz;
+    if (!entity) return '';
+    if (language === 'ru') return entity.nameRu || '';
+    if (language === 'en') return entity.nameEn || '';
+    return entity.nameUz || '';
   }
 }
 

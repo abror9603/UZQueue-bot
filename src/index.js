@@ -1,30 +1,30 @@
-require('dotenv').config();
-const TelegramBot = require('node-telegram-bot-api');
-const sequelize = require('./config/database');
-const commandHandlers = require('./handlers/commandHandlers');
-const callbackHandlers = require('./handlers/callbackHandlers');
-const messageHandlers = require('./handlers/messageHandlers');
-const groupRegistrationHandlers = require('./handlers/groupRegistrationHandlers');
-const replyHandlers = require('./handlers/replyHandlers');
+require("dotenv").config();
+const TelegramBot = require("node-telegram-bot-api");
+const sequelize = require("./config/database");
+const commandHandlers = require("./handlers/commandHandlers");
+const callbackHandlers = require("./handlers/callbackHandlers");
+const messageHandlers = require("./handlers/messageHandlers");
+const groupRegistrationHandlers = require("./handlers/groupRegistrationHandlers");
+const replyHandlers = require("./handlers/replyHandlers");
 
 // Initialize bot
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {
-  polling: true
+  polling: true,
 });
 
 // Test database connection
 async function initializeDatabase() {
   try {
     await sequelize.authenticate();
-    console.log('✅ Database connection established');
-    
+    console.log("✅ Database connection established");
+
     // Sync models (only in development)
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       // await sequelize.sync({ alter: true });
-      console.log('✅ Database models ready');
+      console.log("✅ Database models ready");
     }
   } catch (error) {
-    console.error('❌ Database connection error:', error);
+    console.error("❌ Database connection error:", error);
     process.exit(1);
   }
 }
@@ -37,7 +37,7 @@ bot.onText(/\/start/, async (msg) => {
   try {
     await commandHandlers.handleStart(bot, msg);
   } catch (error) {
-    console.error('Error in /start:', error);
+    console.error("Error in /start:", error);
   }
 });
 
@@ -46,7 +46,7 @@ bot.onText(/\/status(?:\s+(.+))?/, async (msg, match) => {
     const appealId = match[1];
     await commandHandlers.handleStatus(bot, msg, appealId);
   } catch (error) {
-    console.error('Error in /status:', error);
+    console.error("Error in /status:", error);
   }
 });
 
@@ -54,7 +54,7 @@ bot.onText(/\/language/, async (msg) => {
   try {
     await commandHandlers.handleLanguage(bot, msg);
   } catch (error) {
-    console.error('Error in /language:', error);
+    console.error("Error in /language:", error);
   }
 });
 
@@ -62,7 +62,7 @@ bot.onText(/\/help/, async (msg) => {
   try {
     await commandHandlers.handleHelp(bot, msg);
   } catch (error) {
-    console.error('Error in /help:', error);
+    console.error("Error in /help:", error);
   }
 });
 
@@ -73,7 +73,7 @@ bot.onText(/\/admin_status\s+(\S+)\s+(\w+)/, async (msg, match) => {
     const newStatus = match[2];
     await commandHandlers.handleAdminStatus(bot, msg, appealId, newStatus);
   } catch (error) {
-    console.error('Error in /admin_status:', error);
+    console.error("Error in /admin_status:", error);
   }
 });
 
@@ -82,49 +82,56 @@ bot.onText(/\/register_group/, async (msg) => {
   try {
     await groupRegistrationHandlers.handleRegisterGroup(bot, msg);
   } catch (error) {
-    console.error('Error in /register_group:', error);
+    console.error("Error in /register_group:", error);
   }
 });
 
 // Status commands in groups
-bot.onText(/\/status\s+(bajarildi|rad_etildi|jarayonda)/, async (msg, match) => {
-  try {
-    const newStatus = match[1];
-    await commandHandlers.handleGroupStatus(bot, msg, newStatus);
-  } catch (error) {
-    console.error('Error in /status command:', error);
+bot.onText(
+  /\/status\s+(bajarildi|rad_etildi|jarayonda)/,
+  async (msg, match) => {
+    try {
+      const newStatus = match[1];
+      await commandHandlers.handleGroupStatus(bot, msg, newStatus);
+    } catch (error) {
+      console.error("Error in /status command:", error);
+    }
   }
-});
+);
 
 // Callback query handler
-bot.on('callback_query', async (callbackQuery) => {
+bot.on("callback_query", async (callbackQuery) => {
   try {
     await callbackHandlers.handleCallback(bot, callbackQuery);
   } catch (error) {
-    console.error('Error in callback:', error);
+    console.error("Error in callback:", error);
     await bot.answerCallbackQuery(callbackQuery.id, {
-      text: 'Xatolik yuz berdi',
-      show_alert: true
+      text: "Xatolik yuz berdi",
+      show_alert: true,
     });
   }
 });
 
 // Message handler
-bot.on('message', async (msg) => {
+bot.on("message", async (msg) => {
   try {
-    // Skip commands (already handled)
-    if (msg.text && msg.text.startsWith('/')) {
+    // Skip commands (already handled), but allow /skip in appeal flow
+    if (msg.text && msg.text.startsWith("/") && msg.text !== "/skip") {
       return;
     }
 
     // Handle replies to bot messages (group responses)
-    if (msg.reply_to_message && msg.reply_to_message.from.id === (await bot.getMe()).id) {
+    if (
+      msg.reply_to_message &&
+      msg.reply_to_message.from.id === (await bot.getMe()).id
+    ) {
       await replyHandlers.handleReply(bot, msg);
       return;
     }
 
     // Try group registration flow first
-    const inRegistration = await groupRegistrationHandlers.processRegistrationStep(bot, msg);
+    const inRegistration =
+      await groupRegistrationHandlers.processRegistrationStep(bot, msg);
     if (inRegistration) {
       return;
     }
@@ -132,14 +139,13 @@ bot.on('message', async (msg) => {
     // Regular message handling
     await messageHandlers.handleMessage(bot, msg);
   } catch (error) {
-    console.error('Error in message handler:', error);
+    console.error("Error in message handler:", error);
   }
 });
 
 // Error handling
-bot.on('polling_error', (error) => {
-  console.error('Polling error:', error);
+bot.on("polling_error", (error) => {
+  console.error("Polling error:", error);
 });
 
-console.log('🤖 UZQueue Bot is running...');
-
+console.log("🤖 UZQueue Bot is running...");

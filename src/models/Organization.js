@@ -28,7 +28,7 @@ const Organization = sequelize.define('Organization', {
     allowNull: false
   },
   type: {
-    type: DataTypes.ENUM('government', 'education', 'healthcare', 'hokimiyat', 'mahalla', 'other'),
+    type: DataTypes.ENUM('government', 'education', 'healthcare', 'hokimiyat', 'mahalla', 'other', 'private', 'committee', 'ministry'),
     allowNull: false
   },
   isActive: {

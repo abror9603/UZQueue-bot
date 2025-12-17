@@ -21,6 +21,13 @@ class CallbackHandlers {
       return;
     }
 
+    // Handle appeal organization type selection
+    if (data.startsWith('appeal_org_type_')) {
+      await this.handleAppealOrgTypeSelection(bot, callbackQuery, data);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
+    }
+
     // Handle region selection
     if (data.startsWith('region_')) {
       await this.handleRegionSelection(bot, callbackQuery, data);
@@ -42,9 +49,44 @@ class CallbackHandlers {
       return;
     }
 
+    // Handle organization selection for appeal
+    if (data.startsWith('org_')) {
+      await this.handleAppealOrganizationSelection(bot, callbackQuery, data);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
+    }
+
+    // Handle back to appeal org type
+    if (data === 'back_to_appeal_org_type') {
+      await this.handleBackToAppealOrgType(bot, callbackQuery);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
+    }
+
+    // Handle back to organization selection
+    if (data === 'back_to_org_selection') {
+      await this.handleBackToOrgSelection(bot, callbackQuery);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
+    }
+
     // Handle skip neighborhood
     if (data.startsWith('skip_neighborhood_')) {
       await this.handleSkipNeighborhood(bot, callbackQuery, data);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
+    }
+
+    // Handle skip district (for optional location)
+    if (data.startsWith('skip_district_')) {
+      await this.handleSkipDistrict(bot, callbackQuery, data);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
+    }
+
+    // Handle skip region (for optional location)
+    if (data === 'skip_region') {
+      await this.handleSkipRegion(bot, callbackQuery);
       await bot.answerCallbackQuery(callbackQuery.id);
       return;
     }
@@ -334,6 +376,27 @@ class CallbackHandlers {
     const groupType = data.replace('group_type_', '');
     stateData.groupType = groupType;
     await stateService.setData(userId, stateData);
+
+    // For private organizations, skip location selection and go directly to organization name
+    if (groupType === 'xususiy') {
+      await stateService.setStep(userId, 'group_reg_enter_org_name');
+      await bot.editMessageText(
+        '🏢 Xususiy tashkilot nomini kiriting:',
+        {
+          chat_id: chatId,
+          message_id: msg.message_id,
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '◀️ Orqaga', callback_data: 'group_back_to_type' }],
+              [{ text: '❌ Bekor qilish', callback_data: 'cancel_group_reg' }]
+            ]
+          }
+        }
+      );
+      return;
+    }
+
+    // For other types, proceed with region selection
     await stateService.setStep(userId, 'group_reg_select_region');
 
     // Get regions
@@ -855,6 +918,28 @@ class CallbackHandlers {
     const userId = callbackQuery.from.id;
 
     const stateData = await stateService.getData(userId) || {};
+    const groupType = stateData.groupType;
+
+    // For private organizations, go back to organization name input
+    if (groupType === 'xususiy') {
+      await stateService.setStep(userId, 'group_reg_enter_org_name');
+      await bot.editMessageText(
+        '🏢 Xususiy tashkilot nomini kiriting:',
+        {
+          chat_id: chatId,
+          message_id: msg.message_id,
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '◀️ Orqaga', callback_data: 'group_back_to_type' }],
+              [{ text: '❌ Bekor qilish', callback_data: 'cancel_group_reg' }]
+            ]
+          }
+        }
+      );
+      return;
+    }
+
+    // For other organizations, go back to organization selection
     await stateService.setStep(userId, 'group_reg_enter_responsible');
 
     // Get organization name for display
@@ -964,6 +1049,121 @@ class CallbackHandlers {
     await bot.sendMessage(chatId, t('language_selected'), Keyboard.getMainMenu(langCode));
   }
 
+  async handleAppealOrgTypeSelection(bot, callbackQuery, data) {
+    const msg = callbackQuery.message;
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id;
+
+    const user = await userService.getUser(userId);
+    if (!user) return;
+
+    const language = user.language;
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    const orgType = data.replace('appeal_org_type_', '');
+    const stateData = await stateService.getData(userId) || {};
+    stateData.appealOrgType = orgType;
+    await stateService.setData(userId, stateData);
+
+    // Determine next step based on organization type
+    // hokimiyat, mahalla - need location
+    // vazirlik, qomita - optional location (can skip)
+    // xususiy - no location needed (skip directly to organization selection)
+    // other - optional location
+
+    if (orgType === 'xususiy') {
+      // Private organization - skip location, go directly to organization selection
+      await stateService.setStep(userId, 'select_organization');
+      
+      // Use sendMessage instead of editMessageText for private organizations
+      const chatId = msg.chat.id;
+      i18next.changeLanguage(language);
+      const t = i18next.t;
+      
+      // Get organizations filtered by private type
+      const allOrgs = await organizationService.getAllOrganizations(language);
+      const filteredOrgs = allOrgs.filter(org => org.type === 'private');
+
+      if (filteredOrgs.length === 0) {
+        await bot.sendMessage(chatId, t('no_organizations_found', {
+          defaultValue: '❌ Xususiy tashkilotlar topilmadi.'
+        }));
+        return;
+      }
+
+      // Create inline keyboard for organizations
+      const buttons = filteredOrgs.map(org => [{
+        text: org.name,
+        callback_data: `org_${org.id}`
+      }]);
+
+      buttons.push([{
+        text: language === 'ru' ? '◀️ Назад' : language === 'en' ? '◀️ Back' : '◀️ Orqaga',
+        callback_data: 'back_to_appeal_org_type'
+      }]);
+      buttons.push([{
+        text: language === 'ru' ? '❌ Отмена' : language === 'en' ? '❌ Cancel' : '❌ Bekor qilish',
+        callback_data: 'cancel_appeal'
+      }]);
+
+      await bot.editMessageText(
+        t('select_organization'),
+        {
+          chat_id: chatId,
+          message_id: msg.message_id,
+          reply_markup: {
+            inline_keyboard: buttons
+          }
+        }
+      );
+      return;
+    } else if (orgType === 'hokimiyat' || orgType === 'mahalla') {
+      // Need location - start with region selection
+      await stateService.setStep(userId, 'select_region');
+      const regions = await locationService.getAllRegions(language);
+      
+      await bot.editMessageText(
+        t('select_region'),
+        {
+          chat_id: chatId,
+          message_id: msg.message_id,
+          ...Keyboard.getRegionsInline(regions, language)
+        }
+      );
+    } else {
+      // Optional location - ask if they want to specify location
+      await stateService.setStep(userId, 'select_region_optional');
+      const regions = await locationService.getAllRegions(language);
+      
+      await bot.editMessageText(
+        t('select_region_optional', { 
+          defaultValue: '📍 Hududni tanlang (ixtiyoriy):\n\nAgar hududni tanlamasangiz, barcha hududlar uchun murojaat yuboriladi.' 
+        }),
+        {
+          chat_id: chatId,
+          message_id: msg.message_id,
+          reply_markup: {
+            inline_keyboard: [
+              ...regions.map(region => [{
+                text: region.name,
+                callback_data: `region_${region.id}`
+              }]),
+              [{
+                text: language === 'ru' ? '⏭ Пропустить' : language === 'en' ? '⏭ Skip' : '⏭ O\'tkazib yuborish',
+                callback_data: 'skip_region'
+              }],
+              [{
+                text: language === 'ru' ? '❌ Отмена' : language === 'en' ? '❌ Cancel' : '❌ Bekor qilish',
+                callback_data: 'cancel_appeal'
+              }]
+            ]
+          }
+        }
+      );
+    }
+  }
+
   async handleRegionSelection(bot, callbackQuery, data) {
     const msg = callbackQuery.message;
     const chatId = msg.chat.id;
@@ -981,7 +1181,19 @@ class CallbackHandlers {
     const stateData = await stateService.getData(userId) || {};
     stateData.regionId = regionId;
     await stateService.setData(userId, stateData);
-    await stateService.setStep(userId, 'select_district');
+    
+    // Determine next step based on appeal org type
+    const appealOrgType = stateData.appealOrgType;
+    if (appealOrgType === 'hokimiyat') {
+      // For hokimiyat, need district
+      await stateService.setStep(userId, 'select_district');
+    } else if (appealOrgType === 'mahalla') {
+      // For mahalla, need district then neighborhood
+      await stateService.setStep(userId, 'select_district');
+    } else {
+      // For vazirlik, qomita, other - district is optional
+      await stateService.setStep(userId, 'select_district_optional');
+    }
 
     // Get districts for this region
     const districts = await locationService.getDistrictsByRegion(regionId, language);
@@ -991,13 +1203,20 @@ class CallbackHandlers {
       return;
     }
 
+    // Check if district is optional
+    const isOptional = appealOrgType !== 'hokimiyat' && appealOrgType !== 'mahalla';
+    
     // Update message with district selection
+    const districtText = isOptional 
+      ? t('select_district_optional', { defaultValue: '📍 Tuman yoki shaharni tanlang (ixtiyoriy):' })
+      : t('select_district');
+    
     await bot.editMessageText(
-      t('select_district'),
+      districtText,
       {
         chat_id: chatId,
         message_id: msg.message_id,
-        ...Keyboard.getDistrictsInline(districts, language, regionId)
+        ...Keyboard.getDistrictsInline(districts, language, regionId, isOptional)
       }
     );
   }
@@ -1024,7 +1243,18 @@ class CallbackHandlers {
     stateData.districtId = districtId;
     stateData.regionId = regionId;
     await stateService.setData(userId, stateData);
-    await stateService.setStep(userId, 'select_neighborhood');
+    
+    // Determine next step based on appeal org type
+    const appealOrgType = stateData.appealOrgType;
+    if (appealOrgType === 'mahalla') {
+      // For mahalla, need neighborhood
+      await stateService.setStep(userId, 'select_neighborhood');
+    } else {
+      // For others, go to organization selection
+      await stateService.setStep(userId, 'select_organization');
+      await this.showOrganizationSelectionForAppeal(bot, msg, userId, stateData, language);
+      return;
+    }
 
     // Get neighborhoods for this district
     const neighborhoods = await locationService.getNeighborhoodsByDistrict(districtId, language);
@@ -1038,6 +1268,51 @@ class CallbackHandlers {
         ...Keyboard.getNeighborhoodsInline(neighborhoods, language, regionId, districtId)
       }
     );
+  }
+
+  async handleSkipRegion(bot, callbackQuery) {
+    const msg = callbackQuery.message;
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id;
+
+    const user = await userService.getUser(userId);
+    if (!user) return;
+
+    const language = user.language;
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    // Skip location selection and go directly to organization selection
+    const stateData = await stateService.getData(userId) || {};
+    await stateService.setStep(userId, 'select_organization');
+    
+    // Get organizations based on appeal org type
+    await this.showOrganizationSelectionForAppeal(bot, msg, userId, stateData, language);
+  }
+
+  async handleSkipDistrict(bot, callbackQuery, data) {
+    const msg = callbackQuery.message;
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id;
+
+    const user = await userService.getUser(userId);
+    if (!user) return;
+
+    const language = user.language;
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    // Skip district selection and go directly to organization selection
+    const regionId = parseInt(data.replace('skip_district_', ''));
+    const stateData = await stateService.getData(userId) || {};
+    stateData.regionId = regionId;
+    stateData.districtId = null;
+    stateData.neighborhoodId = null;
+    await stateService.setData(userId, stateData);
+    await stateService.setStep(userId, 'select_organization');
+    
+    // Get organizations based on appeal org type
+    await this.showOrganizationSelectionForAppeal(bot, msg, userId, stateData, language);
   }
 
   async handleNeighborhoodSelection(bot, callbackQuery, data) {
@@ -1066,7 +1341,7 @@ class CallbackHandlers {
     await stateService.setData(userId, stateData);
 
     // Continue to organization selection
-    await appealHandlers.continueToOrganizationSelection(bot, msg, userId, stateData, language);
+    await this.showOrganizationSelectionForAppeal(bot, msg, userId, stateData, language);
   }
 
   async handleSkipNeighborhood(bot, callbackQuery, data) {
@@ -1092,7 +1367,125 @@ class CallbackHandlers {
     await stateService.setData(userId, stateData);
 
     // Continue to organization selection
-    await appealHandlers.continueToOrganizationSelection(bot, msg, userId, stateData, language);
+    await this.showOrganizationSelectionForAppeal(bot, msg, userId, stateData, language);
+  }
+
+  async showOrganizationSelectionForAppeal(bot, msg, userId, stateData, language) {
+    const chatId = msg.chat.id;
+    const appealOrgType = stateData.appealOrgType;
+    
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    await stateService.setStep(userId, 'select_organization');
+
+    // Map appeal org type to organization type
+    const orgTypeMap = {
+      'hokimiyat': 'hokimiyat',
+      'mahalla': 'mahalla',
+      'vazirlik': 'ministry',
+      'qomita': 'committee',
+      'xususiy': 'private',
+      'other': 'other'
+    };
+
+    const orgType = orgTypeMap[appealOrgType] || 'other';
+
+    // Get organizations filtered by type
+    const allOrgs = await organizationService.getAllOrganizations(language);
+    const filteredOrgs = allOrgs.filter(org => {
+      if (orgType === 'other') return true;
+      return org.type === orgType;
+    });
+
+    if (filteredOrgs.length === 0) {
+      await bot.sendMessage(chatId, t('no_organizations_found', {
+        defaultValue: '❌ Ushbu turdagi tashkilotlar topilmadi.'
+      }));
+      return;
+    }
+
+    // Create inline keyboard for organizations
+    const buttons = filteredOrgs.map(org => [{
+      text: org.name,
+      callback_data: `org_${org.id}`
+    }]);
+
+    buttons.push([{
+      text: language === 'ru' ? '◀️ Назад' : language === 'en' ? '◀️ Back' : '◀️ Orqaga',
+      callback_data: 'back_to_appeal_org_type'
+    }]);
+    buttons.push([{
+      text: language === 'ru' ? '❌ Отмена' : language === 'en' ? '❌ Cancel' : '❌ Bekor qilish',
+      callback_data: 'cancel_appeal'
+    }]);
+
+    await bot.editMessageText(
+      t('select_organization'),
+      {
+        chat_id: chatId,
+        message_id: msg.message_id,
+        reply_markup: {
+          inline_keyboard: buttons
+        }
+      }
+    );
+  }
+
+  async handleAppealOrganizationSelection(bot, callbackQuery, data) {
+    const msg = callbackQuery.message;
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id;
+
+    const user = await userService.getUser(userId);
+    if (!user) return;
+
+    const language = user.language;
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    const organizationId = parseInt(data.replace('org_', ''));
+    const stateData = await stateService.getData(userId) || {};
+    stateData.organizationId = organizationId;
+    await stateService.setData(userId, stateData);
+    await stateService.setStep(userId, 'enter_name');
+
+    const org = await organizationService.getOrganizationById(organizationId);
+    const orgName = language === 'ru' ? org.nameRu : language === 'en' ? org.nameEn : org.nameUz;
+
+    await bot.editMessageText(
+      `🏛 ${orgName}\n\n${t('enter_name')}`,
+      {
+        chat_id: chatId,
+        message_id: msg.message_id,
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: language === 'ru' ? '◀️ Назад' : language === 'en' ? '◀️ Back' : '◀️ Orqaga', callback_data: 'back_to_org_selection' }],
+            [{ text: language === 'ru' ? '❌ Отмена' : language === 'en' ? '❌ Cancel' : '❌ Bekor qilish', callback_data: 'cancel_appeal' }]
+          ]
+        }
+      }
+    );
+  }
+
+  async handleBackToOrgSelection(bot, callbackQuery) {
+    const msg = callbackQuery.message;
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id;
+
+    const user = await userService.getUser(userId);
+    if (!user) return;
+
+    const language = user.language;
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    const stateData = await stateService.getData(userId) || {};
+    delete stateData.organizationId;
+    await stateService.setData(userId, stateData);
+    await stateService.setStep(userId, 'select_organization');
+
+    await this.showOrganizationSelectionForAppeal(bot, msg, userId, stateData, language);
   }
 
   async handleBackToRegions(bot, callbackQuery) {
