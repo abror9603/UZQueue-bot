@@ -2,6 +2,8 @@ const { TelegramGroup } = require("../models");
 const locationService = require("../services/locationService");
 const organizationService = require("../services/organizationService");
 const stateService = require("../services/stateService");
+const spamProtectionService = require("../services/spamProtectionService");
+const ActionValidator = require("../middleware/actionValidator");
 const Keyboard = require("../utils/keyboard");
 const i18next = require("../config/i18n");
 
@@ -22,6 +24,10 @@ class GroupRegistrationHandlers {
       await bot.sendMessage(chatId, "❌ Bu buyruq faqat guruhda ishlaydi.");
       return;
     }
+
+    // Store group chat_id immediately - this is critical!
+    const groupChatId = chatId.toString();
+    console.log(`[REGISTER_GROUP] Group chat_id saved: ${groupChatId} for user: ${userId}`);
 
     // Check if user is admin
     try {
@@ -44,7 +50,7 @@ class GroupRegistrationHandlers {
 
     // Check if group already registered
     const existingGroup = await TelegramGroup.findOne({
-      where: { chatId: chatId.toString() },
+      where: { chatId: groupChatId },
     });
 
     if (existingGroup) {
@@ -62,6 +68,23 @@ class GroupRegistrationHandlers {
       return;
     }
 
+    // Get group title for reference
+    let groupTitle = msg.chat.title || "Unknown Group";
+    try {
+      const chat = await bot.getChat(groupChatId);
+      groupTitle = chat.title || groupTitle;
+    } catch (error) {
+      console.error("Error getting chat info:", error);
+    }
+
+    // Store group chat_id and title in state BEFORE redirecting to private chat
+    // This ensures we don't lose the group chat_id even if registration is interrupted
+    await stateService.setData(userId, {
+      groupChatId: groupChatId,
+      groupTitle: groupTitle,
+    });
+    console.log(`[REGISTER_GROUP] Group data stored in state: chatId=${groupChatId}, title=${groupTitle}`);
+
     // Redirect to private chat
     await bot.sendMessage(
       chatId,
@@ -72,9 +95,9 @@ class GroupRegistrationHandlers {
         ).username
     );
 
-    // Start registration in private chat
+    // Start registration in private chat - pass groupChatId explicitly
     const privateChatId = userId;
-    await this.startRegistration(bot, privateChatId, chatId, userId);
+    await this.startRegistration(bot, privateChatId, groupChatId, userId);
   }
 
   /**
@@ -84,12 +107,33 @@ class GroupRegistrationHandlers {
     i18next.changeLanguage("uz");
     const t = i18next.t;
 
-    // Store registration data
+    // Get existing state data (may already contain groupChatId from handleRegisterGroup)
+    const existingData = await stateService.getData(userId) || {};
+    
+    // Ensure groupChatId is stored (use existing or new one)
+    const finalGroupChatId = existingData.groupChatId || groupChatId.toString();
+    
+    // Get group title
+    let groupTitle = existingData.groupTitle;
+    if (!groupTitle) {
+      try {
+        const chat = await bot.getChat(finalGroupChatId);
+        groupTitle = chat.title || "Unknown Group";
+      } catch (error) {
+        console.error("Error getting chat title:", error);
+        groupTitle = "Unknown Group";
+      }
+    }
+
+    // Store registration data - ensure groupChatId is always present
     await stateService.setStep(userId, "group_reg_select_category");
     await stateService.setData(userId, {
-      groupChatId: groupChatId.toString(),
-      groupTitle: (await bot.getChat(groupChatId)).title,
+      ...existingData,
+      groupChatId: finalGroupChatId,
+      groupTitle: groupTitle,
     });
+    
+    console.log(`[START_REGISTRATION] Registration started for group: ${finalGroupChatId}, user: ${userId}`);
 
     await bot.sendMessage(
       chatId,
@@ -138,14 +182,31 @@ class GroupRegistrationHandlers {
     const text = msg.text;
 
     const step = await stateService.getStep(userId);
-    const data = (await stateService.getData(userId)) || {};
-
+    
+    // Check if we're in registration flow
     if (!step || !step.startsWith("group_reg_")) {
       return false; // Not in registration flow
     }
 
+    // If we're here, we're in registration flow
+    // State exists (otherwise step would be null)
+    const data = (await stateService.getData(userId)) || {};
+
     i18next.changeLanguage("uz");
     const t = i18next.t;
+
+    // Handle cancel
+    if (text && (text === t('cancel') || text === '❌ Bekor qilish')) {
+      await stateService.clear(userId);
+      await bot.sendMessage(chatId, t('cancel') || '❌ Bekor qilindi', Keyboard.getMainMenu('uz'));
+      return true;
+    }
+
+    // Handle back
+    if (text && (text === t('back') || text === '◀️ Orqaga')) {
+      // Back navigation can be handled per step if needed
+      // For now, just return false to let it fall through
+    }
 
     switch (step) {
       case "group_reg_select_region":
@@ -164,6 +225,11 @@ class GroupRegistrationHandlers {
         await this.handleResponsibleInput(bot, msg, text, data, userId);
         break;
       case "group_reg_enter_phone":
+        // Handle contact sharing (phone number) - skip validation for this
+        if (msg.contact) {
+          await this.handlePhoneInput(bot, msg, text, data, userId);
+          return true;
+        }
         await this.handlePhoneInput(bot, msg, text, data, userId);
         break;
       default:
@@ -305,42 +371,79 @@ class GroupRegistrationHandlers {
     }
 
     data.responsiblePerson = text.trim();
+    data.phoneAttempts = 0; // Initialize phone validation attempts counter
     await stateService.setData(userId, data);
     await stateService.setStep(userId, "group_reg_enter_phone");
 
     await bot.sendMessage(
       chatId,
       "📞 Mas'ul shaxs telefon raqamini kiriting:\n\n" + "Misol: +998901234567",
-      {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: "◀️ Orqaga", callback_data: "group_back_to_responsible" },
-              { text: "❌ Bekor qilish", callback_data: "cancel_group_reg" },
-            ],
-          ],
-        },
-      }
+      Keyboard.getPhoneKeyboard("uz")
     );
   }
 
   async handlePhoneInput(bot, msg, text, data, userId) {
     const chatId = msg.chat.id;
 
-    const phoneRegex = /^\+998\d{9}$/;
-    if (!phoneRegex.test(text)) {
+    let phoneNumber = null;
+
+    // Handle contact sharing (when user uses "Share Phone Number" button)
+    if (msg.contact && msg.contact.phone_number) {
+      const contactPhone = msg.contact.phone_number;
+      // If contact doesn't have +, add it
+      const formattedContact = contactPhone.startsWith('+') ? contactPhone : '+' + contactPhone;
+      
+      // Validate contact phone number (should be Uzbekistan number)
+      const contactValidation = ActionValidator.validatePhone(formattedContact, 'uz');
+      if (!contactValidation.valid) {
+        await bot.sendMessage(chatId, contactValidation.error, Keyboard.getPhoneKeyboard('uz'));
+        return;
+      }
+      phoneNumber = contactValidation.formatted;
+    } else if (text) {
+      // Handle manual phone input
+      const phoneValidation = ActionValidator.validatePhone(text, 'uz');
+      if (!phoneValidation.valid) {
+        // Increment attempts counter
+        data.phoneAttempts = (data.phoneAttempts || 0) + 1;
+        await stateService.setData(userId, data);
+
+        // If 3 or more attempts, ban user
+        if (data.phoneAttempts >= 3) {
+          await spamProtectionService.blockUser(userId, 24);
+          await bot.sendMessage(
+            chatId,
+            '❌ Noto\'g\'ri telefon raqam 3 marta kiritildi. Siz 24 soatga bloklangansiz.'
+          );
+          await stateService.clear(userId);
+          return;
+        }
+
+        // Warning message based on attempts
+        const warningMessage = data.phoneAttempts >= 2
+          ? phoneValidation.error + '\n\n⚠️ Eslatma: Yana bir marta noto\'g\'ri raqam kiritilsa, siz 24 soatga bloklanasiz!'
+          : phoneValidation.error;
+        
+        await bot.sendMessage(chatId, warningMessage, Keyboard.getPhoneKeyboard('uz'));
+        return;
+      }
+      phoneNumber = phoneValidation.formatted;
+    } else {
       await bot.sendMessage(
         chatId,
-        "❌ Telefon raqam noto'g'ri. Format: +998901234567"
+        '❌ Telefon raqam noto\'g\'ri. Format: +998901234567',
+        Keyboard.getPhoneKeyboard('uz')
       );
       return;
     }
 
-    data.responsiblePhone = text.trim();
+    // If we have a valid phone number, proceed
+    data.responsiblePhone = phoneNumber;
+    data.phoneAttempts = 0; // Reset attempts on success
     await stateService.setData(userId, data);
     await stateService.setStep(userId, "group_reg_confirm");
 
-    // Show confirmation
+    // Remove phone keyboard and show confirmation
     await this.showConfirmation(bot, chatId, data, userId);
   }
 
@@ -471,10 +574,12 @@ class GroupRegistrationHandlers {
               {
                 text: "✅ Tasdiqlash",
                 callback_data: "group_confirm_registration",
-              },
-              { text: "❌ Bekor qilish", callback_data: "cancel_group_reg" },
+              }
             ],
-            [{ text: "◀️ Orqaga", callback_data: "group_back_to_phone" }],
+            [
+              { text: "◀️ Orqaga", callback_data: "group_back_to_phone" },
+              { text: "❌ Bekor qilish", callback_data: "cancel_group_reg" }
+            ],
           ],
         },
       });
@@ -583,9 +688,29 @@ class GroupRegistrationHandlers {
         }
       }
 
+      // Validate that groupChatId exists
+      if (!groupChatId) {
+        throw new Error("Guruh chat_id topilmadi. Iltimos, guruhda /register_group buyrug'ini qayta yuboring.");
+      }
+
+      // Check if group already exists (double-check)
+      const existingGroup = await TelegramGroup.findOne({
+        where: { chatId: groupChatId.toString() },
+      });
+
+      if (existingGroup) {
+        await bot.sendMessage(
+          chatId,
+          "ℹ️ Bu guruh allaqachon ro'yxatdan o'tgan.\n\n" +
+            `📌 Status: ${existingGroup.subscriptionStatus}`
+        );
+        await stateService.clear(userId);
+        return;
+      }
+
       // Create telegram group record
       const telegramGroup = await TelegramGroup.create({
-        chatId: groupChatId,
+        chatId: groupChatId.toString(), // Ensure it's a string
         chatTitle: data.groupTitle || chat.title,
         regionId: groupType === "xususiy" ? null : data.regionId,
         districtId: groupType === "xususiy" ? null : data.districtId || null,
@@ -598,6 +723,8 @@ class GroupRegistrationHandlers {
         subscriptionStatus: "inactive",
         isActive: true,
       });
+
+      console.log(`[COMPLETE_REGISTRATION] Telegram group created: ID=${telegramGroup.id}, chatId=${groupChatId}, orgId=${organizationId}`);
 
       await bot.sendMessage(
         chatId,

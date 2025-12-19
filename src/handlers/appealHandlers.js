@@ -56,6 +56,12 @@ class AppealHandlers {
     const t = i18next.t;
 
     const step = await stateService.getStep(userId);
+    
+    // If no step, user is not in appeal flow
+    if (!step) {
+      return false; // Return false to indicate not in appeal flow
+    }
+    
     const data = await stateService.getData(userId) || {};
 
     // Check if user is blocked
@@ -77,16 +83,22 @@ class AppealHandlers {
     }
 
     // Handle cancel
-    if (text === t('cancel') || text === '❌ Bekor qilish') {
+    if (text && (text === t('cancel') || text === '❌ Bekor qilish')) {
       await stateService.clear(userId);
       await bot.sendMessage(chatId, t('cancel'), Keyboard.getMainMenu(language));
-      return;
+      return true;
     }
 
     // Handle back
-    if (text === t('back') || text === '◀️ Orqaga') {
+    if (text && (text === t('back') || text === '◀️ Orqaga')) {
       await this.handleBack(bot, msg, step, data, language);
-      return;
+      return true;
+    }
+
+    // Handle contact sharing (phone number) - skip validation for this
+    if (step === 'enter_phone' && msg.contact) {
+      await this.handlePhoneInput(bot, msg, text, data, language);
+      return true;
     }
 
     // Action validation based on step
@@ -95,18 +107,18 @@ class AppealHandlers {
       const validation = ActionValidator.validate(msg, expectedAction, language);
       if (!validation.valid) {
         await bot.sendMessage(chatId, validation.error);
-        return;
+        return true;
       }
     }
 
     switch (step) {
       case 'select_appeal_org_type':
         // Organization type selection is handled via callback
-        return false;
+        return true; // Still in flow, just handled by callback
       case 'select_region':
       case 'select_region_optional':
         // Region selection is handled via callback
-        return false;
+        return true; // Still in flow, just handled by callback
       case 'select_district':
         await this.handleDistrictSelection(bot, msg, text, data, language);
         break;
@@ -135,8 +147,12 @@ class AppealHandlers {
         await this.handleAppealConfirmation(bot, msg, text, data, language);
         break;
       default:
-        break;
+        // Unknown step, but still in flow
+        return true;
     }
+    
+    // If we reach here, step was processed
+    return true;
   }
 
   _getExpectedAction(step) {
@@ -274,13 +290,14 @@ class AppealHandlers {
     }
 
     data.fullName = text.trim();
+    data.phoneAttempts = 0; // Initialize phone validation attempts counter
     await stateService.setData(userId, data);
     await stateService.setStep(userId, 'enter_phone');
     
     await bot.sendMessage(
       chatId,
       t('enter_phone'),
-      Keyboard.getBackCancel(language)
+      Keyboard.getPhoneKeyboard(language)
     );
   }
 
@@ -291,17 +308,65 @@ class AppealHandlers {
     i18next.changeLanguage(language);
     const t = i18next.t;
 
-    // Validate phone
-    const phoneValidation = ActionValidator.validatePhone(text, language);
-    if (!phoneValidation.valid) {
-      await bot.sendMessage(chatId, phoneValidation.error);
+    let phoneNumber = null;
+
+    // Handle contact sharing (when user uses "Share Phone Number" button)
+    if (msg.contact && msg.contact.phone_number) {
+      const contactPhone = msg.contact.phone_number;
+      // If contact doesn't have +, add it
+      const formattedContact = contactPhone.startsWith('+') ? contactPhone : '+' + contactPhone;
+      
+      // Validate contact phone number (should be Uzbekistan number)
+      const contactValidation = ActionValidator.validatePhone(formattedContact, language);
+      if (!contactValidation.valid) {
+        await bot.sendMessage(chatId, contactValidation.error, Keyboard.getPhoneKeyboard(language));
+        return;
+      }
+      phoneNumber = contactValidation.formatted;
+    } else if (text) {
+      // Handle manual phone input
+      const phoneValidation = ActionValidator.validatePhone(text, language);
+      if (!phoneValidation.valid) {
+        // Increment attempts counter
+        data.phoneAttempts = (data.phoneAttempts || 0) + 1;
+        await stateService.setData(userId, data);
+
+        // If 3 or more attempts, ban user
+        if (data.phoneAttempts >= 3) {
+          await spamProtectionService.blockUser(userId, 24);
+          const banMessage = language === 'ru'
+            ? '❌ Noto\'g\'ri telefon raqam 3 marta kiritildi. Siz 24 soatga bloklangansiz.'
+            : language === 'en'
+            ? '❌ Invalid phone number entered 3 times. You have been blocked for 24 hours.'
+            : '❌ Noto\'g\'ri telefon raqam 3 marta kiritildi. Siz 24 soatga bloklangansiz.';
+          await bot.sendMessage(chatId, banMessage);
+          await stateService.clear(userId);
+          return;
+        }
+
+        // Warning message based on attempts
+        const warningMessage = data.phoneAttempts >= 2
+          ? phoneValidation.error + '\n\n⚠️ Eslatma: Yana bir marta noto\'g\'ri raqam kiritilsa, siz 24 soatga bloklanasiz!'
+          : phoneValidation.error;
+        
+        await bot.sendMessage(chatId, warningMessage, Keyboard.getPhoneKeyboard(language));
+        return;
+      }
+      phoneNumber = phoneValidation.formatted;
+    } else {
+      await bot.sendMessage(chatId, t('validation_error_phone_format', {
+        defaultValue: '❌ Telefon raqam noto\'g\'ri. Format: +998901234567'
+      }), Keyboard.getPhoneKeyboard(language));
       return;
     }
 
-    data.phone = text.trim();
+    // If we have a valid phone number, proceed
+    data.phone = phoneNumber;
+    data.phoneAttempts = 0; // Reset attempts on success
     await stateService.setData(userId, data);
     await stateService.setStep(userId, 'enter_appeal_type');
     
+    // Remove phone keyboard and show regular menu
     await bot.sendMessage(
       chatId,
       t('enter_appeal_type'),
@@ -435,9 +500,18 @@ class AppealHandlers {
     i18next.changeLanguage(language);
     const t = i18next.t;
 
-    // Get location string (may be empty if location was skipped)
+    const org = await organizationService.getOrganizationById(data.organizationId);
+    const orgName = language === 'ru' ? org.nameRu : language === 'en' ? org.nameEn : org.nameUz;
+    
+    // Check if organization is private - if so, don't show location
+    const isPrivateOrg = org.type === 'private' || data.appealOrgType === 'xususiy';
+    
+    // Get location string (skip for private organizations)
     let location = '';
-    if (data.regionId || data.districtId || data.neighborhoodId) {
+    let showLocation = true;
+    if (isPrivateOrg) {
+      showLocation = false;
+    } else if (data.regionId || data.districtId || data.neighborhoodId) {
       location = await locationService.getLocationString(
         data.regionId,
         data.districtId,
@@ -448,17 +522,25 @@ class AppealHandlers {
       location = language === 'ru' ? 'Худуд не указан' : language === 'en' ? 'Location not specified' : 'Hudud ko\'rsatilmagan';
     }
 
-    const org = await organizationService.getOrganizationById(data.organizationId);
-    const orgName = language === 'ru' ? org.nameRu : language === 'en' ? org.nameEn : org.nameUz;
-
-    const confirmText = t('confirm_appeal', {
-      location,
-      organization: orgName,
-      name: data.fullName,
-      phone: data.phone,
-      type: data.appealType,
-      text: data.appealText.substring(0, 200) + (data.appealText.length > 200 ? '...' : '')
-    });
+    // Build confirmation text conditionally
+    let confirmText = '';
+    if (showLocation) {
+      confirmText = t('confirm_appeal', {
+        location,
+        organization: orgName,
+        name: data.fullName,
+        phone: data.phone,
+        type: data.appealType,
+        text: data.appealText.substring(0, 200) + (data.appealText.length > 200 ? '...' : '')
+      });
+    } else {
+      // For private organizations, don't show location
+      confirmText = language === 'ru'
+        ? `✅ Проверьте информацию об обращении:\n\n🏛 Организация: ${orgName}\n👤 Имя: ${data.fullName}\n📞 Телефон: ${data.phone}\n📝 Тип: ${data.appealType}\n📄 Текст: ${data.appealText.substring(0, 200) + (data.appealText.length > 200 ? '...' : '')}\n\nПодтверждаете?`
+        : language === 'en'
+        ? `✅ Check appeal information:\n\n🏛 Organization: ${orgName}\n👤 Name: ${data.fullName}\n📞 Phone: ${data.phone}\n📝 Type: ${data.appealType}\n📄 Text: ${data.appealText.substring(0, 200) + (data.appealText.length > 200 ? '...' : '')}\n\nDo you confirm?`
+        : `✅ Murojaat ma'lumotlarini tekshiring:\n\n🏛 Tashkilot: ${orgName}\n👤 Ism: ${data.fullName}\n📞 Telefon: ${data.phone}\n📝 Tur: ${data.appealType}\n📄 Matn: ${data.appealText.substring(0, 200) + (data.appealText.length > 200 ? '...' : '')}\n\nTasdiqlaysizmi?`;
+    }
 
     await bot.sendMessage(
       chatId,

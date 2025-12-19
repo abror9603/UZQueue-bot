@@ -55,7 +55,12 @@ class MessageHandlers {
 
       // Process appeal flow
       if (step) {
-        await appealHandlers.processAppealStep(bot, msg);
+        const processed = await appealHandlers.processAppealStep(bot, msg);
+        // processAppealStep returns:
+        // - false: step was null (not in flow) - should not happen here since we check step
+        // - true: step was processed
+        // - undefined: step was processed (implicit return)
+        // In all cases, we return (don't show default response)
         return;
       }
 

@@ -28,6 +28,9 @@
   "ai_suggestion": "🤖 AI suggestion:\n\n{{suggestion}}",
   "help": "ℹ️ Help:\n\n/start - Restart bot\n/status <ID> - View appeal status\n/language - Change language\n/help - Help",
   "admin_status_updated": "✅ Status updated!",
-  "admin_status_error": "❌ An error occurred."
+  "admin_status_error": "❌ An error occurred.",
+  "validation_error_phone_format": "❌ Phone number is incorrect. Format: +998901234567",
+  "validation_error_phone_invalid": "❌ Phone number is incorrect. Please enter a valid phone number.",
+  "state_expired": "⏱️ Appeal creation process exceeded 30 minutes. Please start over."
 }
 

@@ -39,6 +39,7 @@
   "validation_error_file_required": "❌ Iltimos, fayl yoki rasm yuboring.",
   "validation_error_button_required": "❌ Iltimos, tugmalardan birini tanlang.",
   "validation_error_phone_format": "❌ Telefon raqam noto'g'ri. Format: +998901234567",
+  "validation_error_phone_invalid": "❌ Telefon raqam noto'g'ri. Iltimos, haqiqiy telefon raqam kiriting.",
   "validation_error_name_too_short": "❌ Ism va familiya kamida 3 ta belgi bo'lishi kerak.",
   "validation_error_name_too_long": "❌ Ism va familiya juda uzun.",
   "validation_error_appeal_too_short": "❌ Murojaat matni kamida 10 ta belgi bo'lishi kerak",
@@ -55,6 +56,7 @@
   "no": "❌ Yo'q",
   "formatting_appeal": "🤖 Murojaatingiz rasmiylashtirilmoqda...",
   "formatted_appeal": "✅ Murojaatingiz rasmiylashtirildi:\n\n",
-  "confirm_formatted": "Tasdiqlaysizmi?"
+  "confirm_formatted": "Tasdiqlaysizmi?",
+  "state_expired": "⏱️ Murojaat yaratish jarayoni 30 daqiqadan oshib ketdi. Qayta boshlang."
 }
 

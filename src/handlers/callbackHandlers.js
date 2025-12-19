@@ -1,6 +1,7 @@
 const userService = require('../services/userService');
 const locationService = require('../services/locationService');
 const organizationService = require('../services/organizationService');
+const moderationService = require('../services/moderationService');
 const Keyboard = require('../utils/keyboard');
 const i18next = require('../config/i18n');
 const stateService = require('../services/stateService');
@@ -231,6 +232,33 @@ class CallbackHandlers {
     const stateData = await stateService.getData(userId) || {};
     const category = data.replace('group_category_', '');
     stateData.category = category;
+    
+    // If xususiy (private) category is selected, skip type selection and go directly to organization name
+    if (category === 'xususiy') {
+      stateData.groupType = 'xususiy';
+      await stateService.setData(userId, stateData);
+      await stateService.setStep(userId, 'group_reg_enter_org_name');
+      
+      // Edit message to remove inline keyboard
+      await bot.editMessageText(
+        '✅ Xususiy tashkilot',
+        {
+          chat_id: chatId,
+          message_id: msg.message_id
+        }
+      ).catch(() => {
+        // If edit fails, ignore (message might already be edited)
+      });
+
+      // Send new message with text keyboard
+      await bot.sendMessage(
+        chatId,
+        '🏢 Xususiy tashkilot nomini kiriting:',
+        Keyboard.getBackCancel('uz')
+      );
+      return;
+    }
+    
     await stateService.setData(userId, stateData);
     await stateService.setStep(userId, 'group_reg_select_type');
 
@@ -280,9 +308,6 @@ class CallbackHandlers {
         { text: '💧 Suv xo\'jaligi vazirligi', callback: 'group_type_vazirlik_suv' },
         { text: '⚡ Energetika vazirligi', callback: 'group_type_vazirlik_energetika' },
         { text: '👨‍👩‍👧‍👦 Mahalla va oilani qo\'llab-quvvatlash vazirligi', callback: 'group_type_vazirlik_mahalla' }
-      ],
-      xususiy: [
-        { text: '🏢 Xususiy tashkilot', callback: 'group_type_xususiy' }
       ]
     };
 
@@ -380,18 +405,23 @@ class CallbackHandlers {
     // For private organizations, skip location selection and go directly to organization name
     if (groupType === 'xususiy') {
       await stateService.setStep(userId, 'group_reg_enter_org_name');
+      
+      // Edit message to remove inline keyboard
       await bot.editMessageText(
-        '🏢 Xususiy tashkilot nomini kiriting:',
+        '✅ Xususiy tashkilot',
         {
           chat_id: chatId,
-          message_id: msg.message_id,
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '◀️ Orqaga', callback_data: 'group_back_to_type' }],
-              [{ text: '❌ Bekor qilish', callback_data: 'cancel_group_reg' }]
-            ]
-          }
+          message_id: msg.message_id
         }
+      ).catch(() => {
+        // If edit fails, ignore (message might already be edited)
+      });
+
+      // Send new message with text keyboard
+      await bot.sendMessage(
+        chatId,
+        '🏢 Xususiy tashkilot nomini kiriting:',
+        Keyboard.getBackCancel('uz')
       );
       return;
     }
@@ -514,18 +544,22 @@ class CallbackHandlers {
       );
     } else if (nextStep === 'group_reg_enter_org_name') {
       // Other: Ask for organization name
+      // Edit message to remove inline keyboard
       await bot.editMessageText(
-        `📍 ${selectedRegion.name} → ${selectedDistrict.name}\n\n🏛 Tashkilot nomini kiriting:`,
+        `📍 ${selectedRegion.name} → ${selectedDistrict.name}`,
         {
           chat_id: chatId,
-          message_id: msg.message_id,
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '◀️ Orqaga', callback_data: `group_back_district_${regionId}` }],
-              [{ text: '❌ Bekor qilish', callback_data: 'cancel_group_reg' }]
-            ]
-          }
+          message_id: msg.message_id
         }
+      ).catch(() => {
+        // If edit fails, ignore
+      });
+
+      // Send new message with text keyboard
+      await bot.sendMessage(
+        chatId,
+        '🏛 Tashkilot nomini kiriting:',
+        Keyboard.getBackCancel('uz')
       );
     }
   }
@@ -601,18 +635,22 @@ class CallbackHandlers {
     const regions = await locationService.getAllRegions('uz');
     const selectedRegion = regions.find(r => r.id === regionId);
 
+    // Edit message to remove inline keyboard
     await bot.editMessageText(
-      `📍 ${selectedRegion.name}\n\n🏛 Tashkilot nomini kiriting:`,
+      `📍 ${selectedRegion.name}`,
       {
         chat_id: msg.chat.id,
-        message_id: msg.message_id,
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '◀️ Orqaga', callback_data: `group_back_region` }],
-            [{ text: '❌ Bekor qilish', callback_data: 'cancel_group_reg' }]
-          ]
-        }
+        message_id: msg.message_id
       }
+    ).catch(() => {
+      // If edit fails, ignore
+    });
+
+    // Send new message with text keyboard
+    await bot.sendMessage(
+      msg.chat.id,
+      '🏛 Tashkilot nomini kiriting:',
+      Keyboard.getBackCancel('uz')
     );
   }
 
@@ -697,18 +735,22 @@ class CallbackHandlers {
     await stateService.setData(userId, stateData);
     await stateService.setStep(userId, 'group_reg_enter_responsible');
 
+    // Edit message to remove inline keyboard
     await bot.editMessageText(
-      `🏛 ${selectedOrg.name}\n\n👤 Mas'ul shaxs F.I.Sh ni kiriting:\n\nMisol: Aliyev Anvar Anvarovich`,
+      `✅ ${selectedOrg.name}`,
       {
         chat_id: chatId,
-        message_id: msg.message_id,
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '◀️ Orqaga', callback_data: 'group_back_org' }],
-            [{ text: '❌ Bekor qilish', callback_data: 'cancel_group_reg' }]
-          ]
-        }
+        message_id: msg.message_id
       }
+    ).catch(() => {
+      // If edit fails, ignore
+    });
+
+    // Send new message with text keyboard
+    await bot.sendMessage(
+      chatId,
+      '👤 Mas\'ul shaxs F.I.Sh ni kiriting:\n\nMisol: Aliyev Anvar Anvarovich',
+      Keyboard.getBackCancel('uz')
     );
   }
 
@@ -894,21 +936,23 @@ class CallbackHandlers {
     const stateData = await stateService.getData(userId) || {};
     await stateService.setStep(userId, 'group_reg_enter_phone');
 
+    // Edit message to remove inline keyboard
     await bot.editMessageText(
-      '📞 Mas\'ul shaxs telefon raqamini kiriting:\n\n' +
-      'Misol: +998901234567',
+      '✅ Telefon raqami',
       {
         chat_id: chatId,
-        message_id: msg.message_id,
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: '◀️ Orqaga', callback_data: 'group_back_to_responsible' },
-              { text: '❌ Bekor qilish', callback_data: 'cancel_group_reg' }
-            ]
-          ]
-        }
+        message_id: msg.message_id
       }
+    ).catch(() => {
+      // If edit fails, ignore
+    });
+
+    // Send new message with text keyboard
+    await bot.sendMessage(
+      chatId,
+      '📞 Mas\'ul shaxs telefon raqamini kiriting:\n\n' +
+      'Misol: +998901234567',
+      Keyboard.getBackCancel('uz')
     );
   }
 
@@ -923,18 +967,23 @@ class CallbackHandlers {
     // For private organizations, go back to organization name input
     if (groupType === 'xususiy') {
       await stateService.setStep(userId, 'group_reg_enter_org_name');
+      
+      // Edit message to remove inline keyboard
       await bot.editMessageText(
-        '🏢 Xususiy tashkilot nomini kiriting:',
+        '🏢 Xususiy tashkilot',
         {
           chat_id: chatId,
-          message_id: msg.message_id,
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '◀️ Orqaga', callback_data: 'group_back_to_type' }],
-              [{ text: '❌ Bekor qilish', callback_data: 'cancel_group_reg' }]
-            ]
-          }
+          message_id: msg.message_id
         }
+      ).catch(() => {
+        // If edit fails, ignore
+      });
+
+      // Send new message with text keyboard
+      await bot.sendMessage(
+        chatId,
+        '🏢 Xususiy tashkilot nomini kiriting:',
+        Keyboard.getBackCancel('uz')
       );
       return;
     }
@@ -951,20 +1000,22 @@ class CallbackHandlers {
       }
     }
 
+    // Edit message to remove inline keyboard
     await bot.editMessageText(
-      `🏛 ${orgName || 'Tashkilot'}\n\n👤 Mas'ul shaxs F.I.Sh ni kiriting:\n\nMisol: Aliyev Anvar Anvarovich`,
+      `✅ ${orgName || 'Tashkilot'}`,
       {
         chat_id: chatId,
-        message_id: msg.message_id,
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: '◀️ Orqaga', callback_data: 'group_back_org' },
-              { text: '❌ Bekor qilish', callback_data: 'cancel_group_reg' }
-            ]
-          ]
-        }
+        message_id: msg.message_id
       }
+    ).catch(() => {
+      // If edit fails, ignore
+    });
+
+    // Send new message with text keyboard
+    await bot.sendMessage(
+      chatId,
+      '👤 Mas\'ul shaxs F.I.Sh ni kiriting:\n\nMisol: Aliyev Anvar Anvarovich',
+      Keyboard.getBackCancel('uz')
     );
   }
 
@@ -973,14 +1024,26 @@ class CallbackHandlers {
     const chatId = msg.chat.id;
     const userId = callbackQuery.from.id;
 
+    const user = await userService.getUser(userId);
+    const language = user?.language || 'uz';
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
     await stateService.clear(userId);
     
     await bot.editMessageText(
-      '❌ Ro\'yxatdan o\'tkazish bekor qilindi.',
+      t('cancel') || '❌ Bekor qilindi',
       {
         chat_id: chatId,
         message_id: msg.message_id
       }
+    );
+
+    // Send main menu
+    await bot.sendMessage(
+      chatId,
+      t('help') || 'Yordam',
+      Keyboard.getMainMenu(language)
     );
   }
 
@@ -1453,18 +1516,22 @@ class CallbackHandlers {
     const org = await organizationService.getOrganizationById(organizationId);
     const orgName = language === 'ru' ? org.nameRu : language === 'en' ? org.nameEn : org.nameUz;
 
+    // Edit message to remove inline keyboard
     await bot.editMessageText(
-      `🏛 ${orgName}\n\n${t('enter_name')}`,
+      `✅ ${orgName}`,
       {
         chat_id: chatId,
-        message_id: msg.message_id,
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: language === 'ru' ? '◀️ Назад' : language === 'en' ? '◀️ Back' : '◀️ Orqaga', callback_data: 'back_to_org_selection' }],
-            [{ text: language === 'ru' ? '❌ Отмена' : language === 'en' ? '❌ Cancel' : '❌ Bekor qilish', callback_data: 'cancel_appeal' }]
-          ]
-        }
+        message_id: msg.message_id
       }
+    ).catch(() => {
+      // If edit fails, ignore (message might already be edited)
+    });
+
+    // Send new message with back/cancel buttons (text keyboard)
+    await bot.sendMessage(
+      chatId,
+      t('enter_name'),
+      Keyboard.getBackCancel(language)
     );
   }
 
