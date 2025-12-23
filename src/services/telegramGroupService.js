@@ -9,12 +9,36 @@ class TelegramGroupService {
     // Build where clause based on available location data
     const whereClause = {
       organizationId,
-      isActive: true,
-      subscriptionStatus: 'active' // Only active subscriptions
+      isActive: true
     };
 
+    // First, try to find group with active subscription
     // If no location specified, try to find group without location constraints
     if (!regionId && !districtId && !neighborhoodId) {
+      // Try with active subscription first
+      const noLocationMatchActive = await TelegramGroup.findOne({
+        where: {
+          ...whereClause,
+          subscriptionStatus: 'active',
+          regionId: null,
+          districtId: null,
+          neighborhoodId: null
+        }
+      });
+      if (noLocationMatchActive) return noLocationMatchActive;
+      
+      // Try any group with this organization (for ministries/committees)
+      // This allows finding groups that don't require location
+      const anyGroupActive = await TelegramGroup.findOne({
+        where: {
+          ...whereClause,
+          subscriptionStatus: 'active'
+        }
+      });
+      if (anyGroupActive) return anyGroupActive;
+
+      // If no active group found, try inactive groups (for debugging/testing)
+      // This will be filtered later in appealHandlers
       const noLocationMatch = await TelegramGroup.findOne({
         where: {
           ...whereClause,
@@ -25,8 +49,6 @@ class TelegramGroupService {
       });
       if (noLocationMatch) return noLocationMatch;
       
-      // Also try to find any group with this organization (for ministries/committees)
-      // This allows finding groups that don't require location
       const anyGroup = await TelegramGroup.findOne({
         where: whereClause
       });
@@ -35,8 +57,26 @@ class TelegramGroupService {
       return null;
     }
 
+    // For location-based search, first try active subscriptions
+    const activeWhereClause = {
+      ...whereClause,
+      subscriptionStatus: 'active'
+    };
+
     // Try to find exact match (region + district + neighborhood + organization)
     if (regionId && districtId && neighborhoodId) {
+      // First try with active subscription
+      const exactMatchActive = await TelegramGroup.findOne({
+        where: {
+          ...activeWhereClause,
+          regionId,
+          districtId,
+          neighborhoodId
+        }
+      });
+      if (exactMatchActive) return exactMatchActive;
+
+      // Then try without subscription filter (will be checked later)
       const exactMatch = await TelegramGroup.findOne({
         where: {
           ...whereClause,
@@ -50,6 +90,18 @@ class TelegramGroupService {
 
     // Try district-level match (region + district + organization)
     if (regionId && districtId) {
+      // First try with active subscription
+      const districtMatchActive = await TelegramGroup.findOne({
+        where: {
+          ...activeWhereClause,
+          regionId,
+          districtId,
+          neighborhoodId: null
+        }
+      });
+      if (districtMatchActive) return districtMatchActive;
+
+      // Then try without subscription filter
       const districtMatch = await TelegramGroup.findOne({
         where: {
           ...whereClause,
@@ -63,6 +115,18 @@ class TelegramGroupService {
 
     // Try region-level match (region + organization)
     if (regionId) {
+      // First try with active subscription
+      const regionMatchActive = await TelegramGroup.findOne({
+        where: {
+          ...activeWhereClause,
+          regionId,
+          districtId: null,
+          neighborhoodId: null
+        }
+      });
+      if (regionMatchActive) return regionMatchActive;
+
+      // Then try without subscription filter
       const regionMatch = await TelegramGroup.findOne({
         where: {
           ...whereClause,

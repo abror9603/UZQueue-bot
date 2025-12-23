@@ -20,17 +20,20 @@ class Keyboard {
       uz: [
         [{ text: "📝 Yangi murojaat" }],
         [{ text: "📊 Murojaat holati" }],
-        [{ text: "🌐 Til" }, { text: "ℹ️ Yordam" }],
+        [{ text: "💎 Premium" }, { text: "🌐 Til" }],
+        [{ text: "ℹ️ Yordam" }],
       ],
       ru: [
         [{ text: "📝 Новое обращение" }],
         [{ text: "📊 Статус обращения" }],
-        [{ text: "🌐 Язык" }, { text: "ℹ️ Помощь" }],
+        [{ text: "💎 Премиум" }, { text: "🌐 Язык" }],
+        [{ text: "ℹ️ Помощь" }],
       ],
       en: [
         [{ text: "📝 New Appeal" }],
         [{ text: "📊 Appeal Status" }],
-        [{ text: "🌐 Language" }, { text: "ℹ️ Help" }],
+        [{ text: "💎 Premium" }, { text: "🌐 Language" }],
+        [{ text: "ℹ️ Help" }],
       ],
     };
 
@@ -536,6 +539,157 @@ class Keyboard {
             ? "❌ Cancel"
             : "❌ Bekor qilish",
         callback_data: "cancel_appeal",
+      },
+    ]);
+
+    return {
+      reply_markup: {
+        inline_keyboard: buttons,
+      },
+    };
+  }
+
+  // Premium Keyboards
+  static getPremiumMenu(language = "uz") {
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    return {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text:
+                language === "ru"
+                  ? "💎 Получить Premium"
+                  : language === "en"
+                  ? "💎 Get Premium"
+                  : "💎 Premium olish",
+              callback_data: "premium_buy",
+            },
+          ],
+          [
+            {
+              text:
+                language === "ru"
+                  ? "📊 Мой Premium"
+                  : language === "en"
+                  ? "📊 My Premium"
+                  : "📊 Mening Premium",
+              callback_data: "premium_status",
+            },
+          ],
+          [
+            {
+              text:
+                language === "ru"
+                  ? "◀️ Назад"
+                  : language === "en"
+                  ? "◀️ Back"
+                  : "◀️ Orqaga",
+              callback_data: "back_to_main",
+            },
+          ],
+        ],
+      },
+    };
+  }
+
+  static getPaymentMethods(language = "uz") {
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    return {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text:
+                language === "ru"
+                  ? "💳 Telegram Wallet (TON)"
+                  : language === "en"
+                  ? "💳 Telegram Wallet (TON)"
+                  : "💳 Telegram Wallet (TON)",
+              callback_data: "payment_method_telegram_wallet",
+            },
+          ],
+          [
+            {
+              text:
+                language === "ru"
+                  ? "💵 Payme"
+                  : language === "en"
+                  ? "💵 Payme"
+                  : "💵 Payme",
+              callback_data: "payment_method_payme",
+            },
+            {
+              text:
+                language === "ru"
+                  ? "⏳ Tez kunda"
+                  : language === "en"
+                  ? "⏳ Coming Soon"
+                  : "⏳ Tez kunda",
+              callback_data: "payment_method_payme_disabled",
+            },
+          ],
+          [
+            {
+              text:
+                language === "ru"
+                  ? "◀️ Назад"
+                  : language === "en"
+                  ? "◀️ Back"
+                  : "◀️ Orqaga",
+              callback_data: "premium_back",
+            },
+          ],
+        ],
+      },
+    };
+  }
+
+  static getPremiumStatus(isPremium, expiresAt, daysLeft, language = "uz") {
+    i18next.changeLanguage(language);
+    const t = i18next.t;
+
+    const buttons = [];
+
+    if (isPremium) {
+      buttons.push([
+        {
+          text:
+            language === "ru"
+              ? "✅ Premium faol"
+              : language === "en"
+              ? "✅ Premium Active"
+              : "✅ Premium faol",
+          callback_data: "premium_info",
+        },
+      ]);
+    } else {
+      buttons.push([
+        {
+          text:
+            language === "ru"
+              ? "💎 Premium olish"
+              : language === "en"
+              ? "💎 Get Premium"
+              : "💎 Premium olish",
+          callback_data: "premium_buy",
+        },
+      ]);
+    }
+
+    buttons.push([
+      {
+        text:
+          language === "ru"
+            ? "◀️ Назад"
+            : language === "en"
+            ? "◀️ Back"
+            : "◀️ Orqaga",
+        callback_data: "back_to_main",
       },
     ]);
 

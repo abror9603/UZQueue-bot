@@ -57,6 +57,22 @@
   "formatting_appeal": "🤖 Murojaatingiz rasmiylashtirilmoqda...",
   "formatted_appeal": "✅ Murojaatingiz rasmiylashtirildi:\n\n",
   "confirm_formatted": "Tasdiqlaysizmi?",
-  "state_expired": "⏱️ Murojaat yaratish jarayoni 30 daqiqadan oshib ketdi. Qayta boshlang."
+  "state_expired": "⏱️ Murojaat yaratish jarayoni 30 daqiqadan oshib ketdi. Qayta boshlang.",
+  "premium_menu": "💎 Premium Tarif\n\nPremium tarif bilan quyidagi imtiyozlarga ega bo'lasiz:\n\n✨ Cheksiz murojaatlar\n✨ Birinchi navbatda javob\n✨ AI yordamchisi\n✨ Batafsil statistikalar\n\n💳 To'lov usulini tanlang:",
+  "premium_status": "📊 Premium Holati\n\n{{status}}\n\n{{expires}}",
+  "premium_active": "✅ Premium faol",
+  "premium_inactive": "❌ Premium faol emas",
+  "premium_expires": "📅 Premium muddati: {{date}}\n⏰ Qolgan kunlar: {{days}}",
+  "premium_expired": "⏰ Premium muddati tugagan",
+  "premium_price": "💰 Narx: {{amount}} {{currency}}\n📅 Muddati: {{days}} kun",
+  "payment_method_telegram_wallet": "💳 Telegram Wallet (TON)\n\n✅ Tavsiya etiladi\n⚡ Tez va xavfsiz",
+  "payment_method_payme": "💵 Payme\n\n⏳ Tez kunda ishga tushadi",
+  "payment_method_payme_disabled": "⏳ Payme to'lov usuli hozircha ishlamaydi. Tez orada qo'shiladi.",
+  "premium_purchase_telegram_wallet": "💳 Telegram Wallet orqali to'lov\n\n💰 Summa: {{amount}} TON\n📅 Premium muddati: {{days}} kun\n\nTo'lovni amalga oshirish uchun quyidagi tugmani bosing:",
+  "premium_purchase_payme": "💵 Payme orqali to'lov\n\n⏳ Hozircha ishlamaydi. Tez orada qo'shiladi.",
+  "payment_success": "✅ To'lov muvaffaqiyatli amalga oshirildi!\n\n💎 Premium {{days}} kunga faollashtirildi.\n📅 Muddati: {{expiresAt}}",
+  "payment_failed": "❌ To'lov amalga oshirilmadi.\n\nSabab: {{reason}}\n\nIltimos, qayta urinib ko'ring.",
+  "payment_cancelled": "❌ To'lov bekor qilindi.",
+  "payment_pending": "⏳ To'lov kutilmoqda...\n\nTo'lovni yakunlang yoki bekor qiling."
 }
 

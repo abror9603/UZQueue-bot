@@ -8,6 +8,7 @@ const Appeal = require('./Appeal');
 const AppealFile = require('./AppealFile');
 const AppealStatusLog = require('./AppealStatusLog');
 const AiLog = require('./AiLog');
+const Payment = require('./Payment');
 
 // Region relationships
 Region.hasMany(District, { foreignKey: 'regionId', as: 'districts' });
@@ -37,6 +38,10 @@ AppealFile.belongsTo(Appeal, { foreignKey: 'appealId', as: 'appeal' });
 AppealStatusLog.belongsTo(Appeal, { foreignKey: 'appealId', as: 'appeal' });
 AiLog.belongsTo(Appeal, { foreignKey: 'appealId', as: 'appeal' });
 
+// Payment relationships
+Payment.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+User.hasMany(Payment, { foreignKey: 'userId', as: 'payments' });
+
 module.exports = {
   User,
   Region,
@@ -47,6 +52,7 @@ module.exports = {
   Appeal,
   AppealFile,
   AppealStatusLog,
-  AiLog
+  AiLog,
+  Payment
 };
 

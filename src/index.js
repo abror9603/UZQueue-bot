@@ -120,10 +120,31 @@ bot.on("message", async (msg) => {
       return;
     }
 
+    // Check if user is in appeal flow and sharing contact
+    // Contact sharing should be processed even if it's a reply
+    if (msg.contact) {
+      const stateService = require("./services/stateService");
+      const step = await stateService.getStep(msg.from.id);
+      // If in appeal or registration flow, process contact immediately
+      if (step === "enter_phone" || step === "group_reg_enter_phone") {
+        // Try group registration flow first
+        const inRegistration =
+          await groupRegistrationHandlers.processRegistrationStep(bot, msg);
+        if (inRegistration) {
+          return;
+        }
+        // Then try appeal flow
+        await messageHandlers.handleMessage(bot, msg);
+        return;
+      }
+    }
+
     // Handle replies to bot messages (group responses)
+    // But skip if it's a contact (already handled above)
     if (
       msg.reply_to_message &&
-      msg.reply_to_message.from.id === (await bot.getMe()).id
+      msg.reply_to_message.from.id === (await bot.getMe()).id &&
+      !msg.contact
     ) {
       await replyHandlers.handleReply(bot, msg);
       return;
@@ -140,6 +161,30 @@ bot.on("message", async (msg) => {
     await messageHandlers.handleMessage(bot, msg);
   } catch (error) {
     console.error("Error in message handler:", error);
+  }
+});
+
+// Handle pre-checkout query (before payment confirmation)
+bot.on("pre_checkout_query", async (preCheckoutQuery) => {
+  try {
+    const premiumHandlers = require("./handlers/premiumHandlers");
+    await premiumHandlers.handlePreCheckoutQuery(bot, preCheckoutQuery);
+  } catch (error) {
+    console.error("Error in pre_checkout_query:", error);
+    await bot.answerPreCheckoutQuery(preCheckoutQuery.id, {
+      ok: false,
+      error_message: "Payment verification failed",
+    });
+  }
+});
+
+// Handle successful payment
+bot.on("successful_payment", async (msg) => {
+  try {
+    const premiumHandlers = require("./handlers/premiumHandlers");
+    await premiumHandlers.handleSuccessfulPayment(bot, msg);
+  } catch (error) {
+    console.error("Error processing successful payment:", error);
   }
 });
 

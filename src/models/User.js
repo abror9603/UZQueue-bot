@@ -43,6 +43,16 @@ const User = sequelize.define(
       defaultValue: true,
       field: "is_active",
     },
+    isPremium: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: "is_premium",
+    },
+    premiumExpiresAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "premium_expires_at",
+    },
   },
   {
     tableName: "users",

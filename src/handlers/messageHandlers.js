@@ -41,6 +41,12 @@ class MessageHandlers {
         return;
       }
 
+      if (text === '💎 Premium' || text === '💎 Премиум' || text === '💎 Premium') {
+        const premiumHandlers = require('./premiumHandlers');
+        await premiumHandlers.showPremiumMenu(bot, msg);
+        return;
+      }
+
       // Check current step
       const step = await stateService.getStep(userId);
       
@@ -73,6 +79,17 @@ class MessageHandlers {
       const step = await stateService.getStep(userId);
       if (step === 'upload_file') {
         await appealHandlers.processAppealStep(bot, msg);
+      }
+      return;
+    }
+
+    // Handle contact sharing in appeal/registration flow
+    if (msg.contact) {
+      const step = await stateService.getStep(userId);
+      if (step) {
+        // Process appeal or registration flow with contact
+        await appealHandlers.processAppealStep(bot, msg);
+        return;
       }
     }
   }

@@ -31,6 +31,22 @@
   "admin_status_error": "❌ An error occurred.",
   "validation_error_phone_format": "❌ Phone number is incorrect. Format: +998901234567",
   "validation_error_phone_invalid": "❌ Phone number is incorrect. Please enter a valid phone number.",
-  "state_expired": "⏱️ Appeal creation process exceeded 30 minutes. Please start over."
+  "state_expired": "⏱️ Appeal creation process exceeded 30 minutes. Please start over.",
+  "premium_menu": "💎 Premium Plan\n\nWith Premium plan you get the following benefits:\n\n✨ Unlimited appeals\n✨ Priority response\n✨ AI assistant\n✨ Detailed statistics\n\n💳 Select payment method:",
+  "premium_status": "📊 Premium Status\n\n{{status}}\n\n{{expires}}",
+  "premium_active": "✅ Premium active",
+  "premium_inactive": "❌ Premium inactive",
+  "premium_expires": "📅 Expires: {{date}}\n⏰ Days left: {{days}}",
+  "premium_expired": "⏰ Premium expired",
+  "premium_price": "💰 Price: {{amount}} {{currency}}\n📅 Duration: {{days}} days",
+  "payment_method_telegram_wallet": "💳 Telegram Wallet (TON)\n\n✅ Recommended\n⚡ Fast and secure",
+  "payment_method_payme": "💵 Payme\n\n⏳ Coming soon",
+  "payment_method_payme_disabled": "⏳ Payme payment method is not available yet. Will be added soon.",
+  "premium_purchase_telegram_wallet": "💳 Payment via Telegram Wallet\n\n💰 Amount: {{amount}} TON\n📅 Premium duration: {{days}} days\n\nClick the button below to pay:",
+  "premium_purchase_payme": "💵 Payment via Payme\n\n⏳ Not available yet. Will be added soon.",
+  "payment_success": "✅ Payment successful!\n\n💎 Premium activated for {{days}} days.\n📅 Expires: {{expiresAt}}",
+  "payment_failed": "❌ Payment failed.\n\nReason: {{reason}}\n\nPlease try again.",
+  "payment_cancelled": "❌ Payment cancelled.",
+  "payment_pending": "⏳ Payment pending...\n\nComplete the payment or cancel it."
 }
 
