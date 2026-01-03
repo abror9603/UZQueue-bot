@@ -1,0 +1,13 @@
+{
+  "enter_id": "Murojaat ID ni kiriting:",
+  "not_found": "Murojaat topilmadi",
+  "title": "Murojaat holati",
+  "date": "Sana",
+  "status": "Holat",
+  "response": "Javob",
+  "pending": "Kutilmoqda",
+  "in_progress": "Ko'rib chiqilmoqda",
+  "completed": "Bajarildi",
+  "rejected": "Rad etildi"
+}
+

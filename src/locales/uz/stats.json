@@ -1,0 +1,26 @@
+{
+  "title": "Statistika",
+  "total_applications": "Jami murojaatlar",
+  "this_month": "Shu oy",
+  "pending": "Kutilmoqda",
+  "completed": "Bajarildi",
+  "rejected": "Rad etildi",
+  "success_rate": "Muvaffaqiyat darajasi",
+  "premium_analytics": "Premium Tahlil",
+  "avg_response_time": "O'rtacha javob vaqti",
+  "best_time": "Eng yaxshi vaqt",
+  "best_organization": "Eng yaxshi tashkilot",
+  "success_trend": "Muvaffaqiyat trendi",
+  "monthly_chart": "Oylik grafik",
+  "premium_teaser": "💎 Premium obuna bilan batafsil tahlillarni oching",
+  "by_month": "Oylar bo'yicha",
+  "by_org": "Tashkilotlar bo'yicha",
+  "detailed_report": "Batafsil hisobot",
+  "export_excel": "Excel'ga eksport",
+  "unlock_premium": "Premium imkoniyatlarni ochish",
+  "generating": "Hisobot tayyorlanmoqda...",
+  "generating_excel": "Excel hisoboti yaratilmoqda",
+  "excel_ready": "Excel hisoboti tayyor!",
+  "feature_coming_soon": "Bu funksiya tez orada qo'shiladi"
+}
+

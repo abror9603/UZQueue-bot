@@ -1,141 +1,201 @@
-# UZQueue Telegram Bot
+# UZQueue Bot v2.0
 
-Telegram bot for UZQueue AI Platform - helping citizens navigate government services, queue management, and document processing in Uzbekistan and CIS countries.
+Citizen-to-Government Communication Platform for Uzbekistan
 
-## Features
+## 🎯 Mission
 
-- 🤖 AI Smart Routing - Automatic identification of required organizations and departments
-- 📄 AI Document Assistant - Document preparation and guidance
-- 🎤 Voice Assistant - Voice message processing
-- 📋 Queue Management - Finding and booking queues (simulation)
-- 📸 Document Image Recognition - Analyze document photos
-- 📊 Application Tracking - Track application status
-- 🌍 Multi-language Support - Uzbek, Russian, English
-- 👤 User State Tracking - Track user navigation steps
+Create a transparent bridge between citizens and government organizations, eliminating bureaucratic delays and ensuring accountability.
 
-## Technologies
+## 🚀 Phase 1 Goals
 
-- Node.js
-- Express.js
-- Redis (session management)
-- PostgreSQL (database)
-- Sequelize (ORM)
-- node-telegram-bot-api
+- Deploy in 1 region (Sirdaryo viloyat)
+- Support 3-5 government organizations
+- Handle 1000 test users
+- Achieve 85%+ routing accuracy
 
-## Setup
+## 🛠 Technology Stack
 
-1. Install dependencies:
+- **Runtime**: Node.js 20+
+- **Language**: TypeScript 5+
+- **Framework**: Telegraf.js (latest)
+- **Database**: MongoDB 7+ with Mongoose
+- **Cache**: Redis (optional for Phase 1)
+- **AI**: OpenAI API (GPT-4o-mini)
+- **Validation**: Zod
+- **Testing**: Jest + Supertest
+- **Logging**: Winston
+
+## 📋 Prerequisites
+
+- Node.js 20+ installed
+- MongoDB Atlas account (or local MongoDB)
+- Telegram Bot Token from @BotFather
+- OpenAI API key
+
+## 🔧 Setup Instructions
+
+### 1. Install Dependencies
+
 ```bash
 npm install
 ```
 
-2. Configure environment variables:
+### 2. Configure Environment Variables
+
+Copy `.env.example` to `.env`:
+
 ```bash
 cp .env.example .env
-# Edit .env with your configuration
 ```
 
-3. Setup database:
+Then edit `.env` file and fill in your values:
+
+```env
+# Required
+BOT_TOKEN=your_telegram_bot_token          # From @BotFather
+MONGO_URI=mongodb+srv://...                # MongoDB connection string
+OPENAI_API_KEY=your_openai_api_key         # From OpenAI Platform
+SUPER_ADMIN_IDS=123456789,987654321        # Your Telegram IDs
+
+# Optional
+NODE_ENV=development
+LOG_LEVEL=info
+```
+
+**How to get values:**
+- **BOT_TOKEN**: Message @BotFather on Telegram, create a bot, get token
+- **MONGO_URI**: Create MongoDB Atlas account, create cluster, get connection string
+- **CLAUDE_API_KEY**: Sign up at https://console.anthropic.com/, get API key
+- **SUPER_ADMIN_IDS**: Message @userinfobot on Telegram to get your Telegram ID
+
+### 3. Build TypeScript
+
 ```bash
-npm run migrate
+npm run build
 ```
 
-4. Run the bot:
-```bash
-npm start
-```
+### 4. Run the Bot
 
-For development with auto-reload:
+**Development:**
 ```bash
 npm run dev
 ```
 
-## Configuration
+**Production:**
+```bash
+npm start
+```
 
-### Required Environment Variables
-
-- `TELEGRAM_BOT_TOKEN` - Your Telegram bot token from @BotFather
-- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` - PostgreSQL configuration
-- `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` - Redis configuration
-- `PORT` - Express server port (default: 3000)
-
-## Project Structure
+## 📁 Project Structure
 
 ```
 src/
-├── index.js                        # Main entry point
-├── handlers/                       # Command and message handlers
-│   ├── commandHandlers.js         # /start, /help, /settings
-│   ├── messageHandlers.js         # Text, voice, photo messages
-│   └── callbackHandlers.js        # Callback query handlers
-├── services/                       # Business logic services
-│   ├── smartRoutingService.js     # AI Smart Routing (demo)
-│   ├── documentService.js         # Document preparation (demo)
-│   ├── queueService.js            # Queue management (demo)
-│   ├── voiceService.js            # Voice transcription (demo)
-│   ├── documentRecognitionService.js # Document analysis (demo)
-│   ├── applicationTrackingService.js # Application tracking
-│   ├── userService.js             # User management
-│   └── stateService.js            # Redis state management
-├── models/                         # Sequelize database models
-│   ├── User.js                    # User model
-│   ├── Application.js             # Application model
-│   ├── Queue.js                   # Queue model
-│   └── index.js                   # Model associations
-├── config/                         # Configuration files
-│   ├── database.js                # Sequelize config
-│   ├── redis.js                   # Redis client
-│   └── i18n.js                    # i18next config
-├── locales/                        # Translation files
-│   ├── uz.json                    # Uzbek translations
-│   ├── ru.json                    # Russian translations
-│   └── en.json                    # English translations
-├── migrations/                     # Database migrations
-└── utils/                          # Utility functions
-    └── keyboard.js                # Keyboard builders
+├── index.ts                 # Entry point
+├── bot.ts                   # Bot initialization
+├── config/
+│   ├── database.ts          # MongoDB connection
+│   ├── constants.ts        # App constants
+│   └── env.ts              # Environment validation
+├── models/                  # Mongoose models
+├── services/                # Business logic
+├── handlers/                # Bot handlers
+├── middleware/              # Middleware functions
+├── utils/                   # Utility functions
+└── types/                   # TypeScript types
 ```
 
-## Environment Variables
+## 🧪 Testing
 
-Create a `.env` file in the root directory:
+```bash
+# Run all tests
+npm test
 
-```env
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=uzqueue_bot
-DB_USER=postgres
-DB_PASSWORD=your_password_here
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=
-PORT=3000
-NODE_ENV=development
+# Unit tests only
+npm run test:unit
+
+# Integration tests
+npm run test:integration
+
+# E2E tests
+npm run test:e2e
+
+# With coverage
+npm run test:coverage
 ```
 
-## Demo Mode
+## 📝 Code Quality
 
-Currently running in demo mode. Third-party API integrations are commented out and will be connected later:
-- AI Routing API (for smart routing)
-- Document Generation API (for document assistant)
-- Voice-to-Text API (for voice assistant)
-- Document Recognition API (for image analysis)
-- Government Services API (for application tracking)
-- Queue Management API (for queue booking)
+```bash
+# Lint code
+npm run lint
 
-## System Prompt
+# Fix linting issues
+npm run lint:fix
 
-The bot uses the following system prompt internally:
-
-```
-Siz — UZQueue AI Platform uchun mo'ljallangan rasmiy AI yordamchi tizimisiz. 
-Sizning vazifangiz O'zbekiston va MDH davlatlaridagi davlat idoralari, banklar, 
-klinikalar va xizmat ko'rsatish tashkilotlaridagi fuqarolar murojaatlarini, 
-navbatlarni va hujjat jarayonlarini sun'iy intellekt yordamida avtomatlashtirishdir.
+# Type check
+npm run type-check
 ```
 
-## License
+## 🚢 Deployment
+
+### Railway.app (Recommended)
+
+1. Install Railway CLI: `npm install -g @railway/cli`
+2. Login: `railway login`
+3. Initialize: `railway init`
+4. Set environment variables
+5. Deploy: `railway up`
+
+### VPS Deployment
+
+1. Build: `npm run build`
+2. Use PM2: `pm2 start dist/index.js`
+3. Setup Nginx (optional)
+
+## 📊 Monitoring
+
+- **UptimeRobot**: Monitor bot health
+- **Sentry**: Error tracking (optional)
+- **Winston Logs**: Check `logs/` directory
+
+## 🔐 Security
+
+- All inputs validated with Zod
+- Rate limiting implemented
+- Environment variables for secrets
+- No hardcoded credentials
+
+## 📚 Features
+
+### ✅ Completed
+
+- Step 1-3: Project setup, Database models, Bot initialization
+- Step 4: User Onboarding (/start, language, phone, region)
+- Step 5: Request Creation (text, media, voice)
+
+### ⏳ In Progress
+
+- Step 6: AI Classification (Claude API)
+- Step 7: Smart Routing
+- Step 8: Organization Admin Panel
+
+## 🤝 Contributing
+
+1. Follow TypeScript best practices
+2. Write tests for new features
+3. Update documentation
+4. Follow code style guidelines
+
+## 📄 License
 
 ISC
 
-# UZQueue-bot
+## 🆘 Support
+
+For issues and questions:
+- GitHub Issues
+- Telegram: @uzqueue_support
+
+---
+
+**Built with ❤️ for Uzbekistan**

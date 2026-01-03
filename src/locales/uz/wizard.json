@@ -1,0 +1,105 @@
+{
+  "progress": "Qadam {{step}} / {{total}}",
+  "cancelled": "❌ Bekor qilindi",
+  "step1": {
+    "title": "Murojaat yaratish usulini tanlang",
+    "description": "Quyidagi usullardan birini tanlang:",
+    "use_template": "Shablondan foydalanish",
+    "write_custom": "O'zim yozish",
+    "voice_message": "Ovozli xabar",
+    "ai_help": "AI yordamida yozish"
+  },
+  "step2": {
+    "title": "Shablonni tanlang",
+    "popular_templates": "📊 Mashhur shablonlar:",
+    "search_template": "Shablon qidirish"
+  },
+  "step2_custom": {
+    "title": "Murojaat matnini yozing",
+    "description": "Murojaat matnini batafsil yozing. Qanchalik aniq yozsangiz, javob olish ehtimoli shunchalik yuqori.",
+    "tips": "Maslahatlar",
+    "tip1": "Muammoni aniq va qisqa bayon qiling",
+    "tip2": "Muhim faktlarni ko'rsating",
+    "tip3": "Nima so'rayotganingizni aniq ayting"
+  },
+  "step2_voice": {
+    "title": "Ovozli xabar yuboring",
+    "description": "Ovozli xabar yozib, murojaatingizni aytib bering. Biz uni avtomatik matnga aylantiramiz.",
+    "max_duration": "Maksimal davomiyligi: 5 daqiqa"
+  },
+  "step2_ai": {
+    "title": "AI yordamchi",
+    "description": "Murojaatingiz haqida qisqacha ma'lumot bering, AI sizga professional murojaat tayyorlab beradi.",
+    "instruction": "Masalan: 'Ko'chamizda yorug'lik yo'q, tuzatishni so'rayman'"
+  },
+  "processing_voice": "Ovoz qayta ishlanmoqda",
+  "voice_transcribed": "Ovoz matnga aylantirildi",
+  "transcription": "Transkriptsiya",
+  "ai_generating": "AI murojaat yozmoqda",
+  "ai_generated": "AI murojaat tayyorladi",
+  "generated_text": "Yaratilgan matn",
+  "analyzing": "Tahlil qilinmoqda",
+  "analysis_results": "Tahlil natijalari",
+  "length": "Uzunlik",
+  "clarity": "Aniqlik",
+  "organization": "Tashkilot",
+  "success_probability": "Muvaffaqiyat ehtimoli",
+  "suggestions": "Takliflar",
+  "suggestion_clarity": "Murojaatni yanada aniq yozing",
+  "ai_improve_offer": "AI yordamida murojaatni professional formatga o'tkazing va muvaffaqiyat ehtimolini oshiring",
+  "wrong_org": "Noto'g'ri tashkilot",
+  "suggested_org": "Tavsiya etiladigan tashkilot",
+  "improve_with_ai": "AI bilan yaxshilash",
+  "step4": {
+    "title": "Kategoriyani tanlang",
+    "description": "Qaysi turdagi tashkilotga murojaat qilmoqchisiz?"
+  },
+  "ai_recommends": "AI tavsiya qiladi",
+  "step5": {
+    "title": "Hududni tanlang",
+    "description": "Qaysi hududdagi tashkilotga murojaat qilmoqchisiz?"
+  },
+  "send_location": "Joylashuvimni yuborish",
+  "select_manually": "Qo'lda tanlash",
+  "select_region": "Viloyatni tanlang",
+  "searching_organizations": "Tashkilotlar qidirilmoqda",
+  "step6": {
+    "title": "Tashkilotni tanlang",
+    "top_organizations": "⭐ Eng yaxshi tashkilotlar:"
+  },
+  "search_organization": "Tashkilot qidirish",
+  "step7": {
+    "confirm": "Murojaatni tasdiqlang"
+  },
+  "organization": "Tashkilot",
+  "region": "Hudud",
+  "name": "Ism",
+  "phone": "Telefon",
+  "application_text": "Murojaat matni",
+  "attachment": "Ilova",
+  "prediction": "Prognoz",
+  "success_rate": "Muvaffaqiyat darajasi",
+  "expected_time": "Kutish vaqti",
+  "vip_queue": "(VIP navbat)",
+  "confirm_send": "Tasdiqlash va yuborish",
+  "add_file": "Fayl qo'shish",
+  "boost_with_premium": "Premium bilan kuchaytirish",
+  "cancel_application": "Murojaatni bekor qilish",
+  "success": "Murojaat muvaffaqiyatli yuborildi!",
+  "application_id": "Murojaat ID",
+  "date": "Sana",
+  "vip_processing": "VIP tarzda ko'rib chiqiladi (24 soat ichida)",
+  "regular_processing": "3-7 kun ichida ko'rib chiqiladi",
+  "notification_info": "Holat o'zgarganda xabar olib turasiz",
+  "track_status": "Holatni kuzatish",
+  "new_application": "Yangi murojaat",
+  "use_this": "Ishlatish",
+  "regenerate": "Qayta yaratish",
+  "edit_text": "Matnni tahrirlash",
+  "correct": "To'g'ri",
+  "edit": "Tahrirlash",
+  "template_selected": "Shablon tanlandi",
+  "template_content": "Shablon matni",
+  "edit_if_needed": "Agar kerak bo'lsa, tahrirlang"
+}
+

@@ -1,0 +1,326 @@
+================================================================================
+UZQUEUE BOT - BARCHA IMKONIYATLAR RO'YXATI
+================================================================================
+
+Bot nomi: UZQueue Telegram Bot
+Maqsad: Fuqaro murojaatlari, navbatlar va hujjat jarayonlarini avtomatlashtirish
+Tillar: O'zbek, Rus, Ingliz
+
+================================================================================
+BEPUL TARIF (FREE) - BARCHA FOYDALANUVCHILAR UCHUN
+================================================================================
+
+1. FOYDALANUVCHI RO'YXATDAN O'TISH VA SOZLAMALAR
+   ✓ Botni ishga tushirish (/start)
+   ✓ Til tanlash (O'zbek, Rus, Ingliz)
+   ✓ Foydalanuvchi ma'lumotlarini saqlash
+   ✓ Yordam olish (/help)
+
+2. MUROJAAT YUBORISH (CHEKLANGAN)
+   ✓ Murojaat yaratish
+   ✓ Tashkilot turini tanlash:
+     - Hokimiyat organlari
+     - Mahalla
+     - Vazirliklar
+     - Davlat qo'mitalari
+     - Xususiy tashkilotlar
+   ✓ Hudud tanlash (Viloyat, Tuman, Mahalla)
+   ✓ Tashkilotni tanlash
+   ✓ Shaxsiy ma'lumotlarni kiritish (Ism, Telefon)
+   ✓ Murojaat matnini yozish
+   ✓ Fayl yuborish (ixtiyoriy - rasm, PDF)
+   ✓ Murojaatni tasdiqlash va yuborish
+   ⚠️ OYLIK CHEKLASH: Oyiga cheklangan miqdorda murojaat yuborish mumkin
+
+3. MUROJAAT HOLATINI KUZATISH
+   ✓ Murojaat ID orqali holatni ko'rish (/status)
+   ✓ Murojaat ma'lumotlarini ko'rish:
+     - Murojaat ID
+     - Hudud
+     - Tashkilot
+     - Fuqaro ma'lumotlari
+     - Murojaat matni
+     - Holat (Jarayonda/Bajarildi/Rad etildi)
+     - Yaratilgan sana
+   ✓ Asosiy holat yangilanishlari haqida xabar olish
+
+4. ASOSIY STATISTIKA
+   ✓ Jami murojaatlar soni
+   ✓ Bu oydagi murojaatlar soni
+   ✓ Holatlar bo'yicha taqsimot (Jarayonda/Bajarildi/Rad etildi)
+   ✓ Muvaffaqiyat darajasi (%)
+
+5. SPAM VA XAVFSIZLIK
+   ✓ Spam himoyasi
+   ✓ Tez-tez murojaat yuborishni cheklash
+   ✓ Noto'g'ri murojaatlarni aniqlash
+   ✓ Vaqtinchalik bloklash (agar kerak bo'lsa)
+
+6. GURUH RO'YXATDAN O'TKAZISH (TASHKILOTLAR UCHUN)
+   ✓ Telegram guruhini ro'yxatdan o'tkazish (/register_group)
+   ✓ Tashkilot kategoriyasini tanlash:
+     - Mahalliy davlat hokimiyati organlari
+     - Davlat Qo'mitalari
+     - Vazirliklar
+     - Xususiy tashkilotlar
+   ✓ Tashkilot turini tanlash
+   ✓ Hududni tanlash
+   ✓ Tashkilotni tanlash
+   ✓ Mas'ul shaxs ma'lumotlarini kiritish
+   ✓ Telefon raqamini kiritish
+   ✓ Guruhni tasdiqlash
+   ⚠️ Eslatma: Guruh ro'yxatdan o'tkazilgandan keyin Premium tarifni faollashtirish kerak
+
+7. GURUH ADMIN FUNKSIYALARI
+   ✓ Murojaat holatini o'zgartirish (guruhda)
+   ✓ Murojaatga javob berish
+   ✓ Fuqaroga xabar yuborish
+
+8. KO'P TILLI QO'LLAB-QUVVATLASH
+   ✓ O'zbek tili
+   ✓ Rus tili
+   ✓ Ingliz tili
+   ✓ Har bir foydalanuvchi uchun alohida til tanlash
+
+================================================================================
+PREMIUM TARIF - TO'LOVLI IMKONIYATLAR
+================================================================================
+
+PREMIUM TARIF NARXI:
+💰 5 TON (yoki ~50,000 UZS)
+📅 Muddati: 30 kun
+💳 To'lov usullari:
+   - Telegram Wallet (TON)
+   - Payme (tez orada qo'shiladi)
+
+================================================================================
+PREMIUM FOYDALANUVCHILAR UCHUN IMKONIYATLAR:
+================================================================================
+
+1. CHEKSIZ MUROJAATLAR
+   ✨ Oylik cheklash yo'q
+   ✨ Istalgan miqdorda murojaat yuborish
+   ✨ Cheksiz fayl yuborish
+
+2. BIRINCHI NAVBATDA JAVOB
+   ✨ Premium foydalanuvchilar murojaatlari birinchi navbatda ko'rib chiqiladi
+   ✨ Tezroq javob olish
+   ✨ Ustuvorlik beriladi
+
+3. PREMIUM AI YORDAMCHI
+   ✨ Shaxsiy AI yordamchi bilan suhbatlashish (/ai_assistant)
+   ✨ Har qanday savolga javob olish
+   ✨ Murojaat yozishda yordam
+   ✨ Tashkilot tanlashda maslahat
+   ✨ Hujjatlar tayyorlashda yordam
+
+4. PROFESSIONAL MUROJAAT YOZISH (AI)
+   ✨ AI yordamida murojaatni rasmiy formatga o'tkazish
+   ✨ Rasmiy ton va struktura
+   ✨ Aniq va to'liq murojaat yozish
+   ✨ Yuqori muvaffaqiyat ehtimoli
+   ✨ Professional ko'rinish
+
+5. MUVAFFAQIYAT EHTIMOLI BAHOLASH (AI)
+   ✨ Murojaatingizning muvaffaqiyat ehtimolini baholash
+   ✨ 10 ballik tizimda baholash
+   ✨ Foiz ko'rsatkichi
+   ✨ Zaif tomonlarni aniqlash
+   ✨ Yaxshilash takliflari
+   ✨ Batafsil tahlil
+
+6. TO'G'RI TASHKILOTNI TANLASH (AI)
+   ✨ AI yordamida eng mos tashkilotni tanlash
+   ✨ Murojaat matnini tahlil qilish
+   ✨ Eng yaxshi tashkilotni tavsiya qilish
+   ✨ Xato tashkilot tanlashdan saqlash
+
+7. RASMIY JAVOBNI TUSHUNTIRISH (AI)
+   ✨ Rasmiy javobni oddiy tilda tushuntirish
+   ✨ Asosiy nuqtalarni ajratib ko'rsatish
+   ✨ Bu nimani anglatishini tushuntirish
+   ✨ Natijalarni tushunarli qilib berish
+
+8. KEYINGI QADAMLAR BO'YICHA MASLAHAT (AI)
+   ✨ Keyingi qadamlar bo'yicha tavsiyalar
+   ✨ Ustuvorlikni aniqlash
+   ✨ Qanday harakat qilish kerakligini ko'rsatish
+   ✨ Sabab va asoslarni tushuntirish
+
+9. BATAFSIL STATISTIKA
+   ✨ To'liq statistik ma'lumotlar
+   ✨ O'rtacha javob vaqti
+   ✨ Muvaffaqiyat darajasi
+   ✨ Holatlar bo'yicha batafsil tahlil
+   ✨ Premium muddati va qolgan kunlar
+
+10. PREMIUM HOLAT XABARLARI
+    ✨ Premium muddati haqida eslatmalar
+    ✨ Qolgan kunlar haqida ma'lumot
+    ✨ Premium holatini ko'rish (/premium)
+
+================================================================================
+GURUH PREMIUM TARIF - TASHKILOTLAR UCHUN
+================================================================================
+
+GURUH PREMIUM NARXI:
+💰 5 TON (yoki ~50,000 UZS)
+📅 Muddati: 30 kun
+💳 To'lov usullari:
+   - Telegram Wallet (TON)
+   - Payme (tez orada qo'shiladi)
+
+GURUH PREMIUM IMKONIYATLARI:
+
+1. GURUHGA MUROJAATLAR QABUL QILISH
+   ✨ Premium faollashtirilgandan keyin guruhga murojaatlar yuboriladi
+   ✨ Guruh adminlari murojaatlarni ko'rish va boshqarish
+   ✨ Murojaat holatini o'zgartirish
+
+2. CHEKSIZ MUROJAATLAR
+   ✨ Guruh uchun cheksiz murojaatlar qabul qilish
+   ✨ Oylik cheklash yo'q
+
+3. BIRINCHI NAVBATDA JAVOB
+   ✨ Premium guruhlar murojaatlari birinchi navbatda ko'rib chiqiladi
+   ✨ Tezroq javob berish
+
+4. AI YORDAMCHI
+   ✨ Guruh uchun AI yordamchisi
+   ✨ Murojaatlarni tahlil qilish
+   ✨ Javob yozishda yordam
+
+5. BATAFSIL STATISTIKA
+   ✨ Guruh statistikasi
+   ✨ Murojaatlar soni
+   ✨ Holatlar bo'yicha taqsimot
+
+GURUH PREMIUMNI FAOLLASHTIRISH:
+1. Guruhni ro'yxatdan o'tkazish (/register_group)
+2. Bot bilan shaxsiy chatda /group_premium buyrug'ini yuborish
+3. To'lov usulini tanlash
+4. To'lovni amalga oshirish
+5. Premium avtomatik faollashtiriladi
+
+================================================================================
+MUAMMOLAR VA CHEKLASHLAR
+================================================================================
+
+BEPUL TARIF CHEKLASHLARI:
+⚠️ Oylik murojaatlar soni cheklangan
+⚠️ Premium AI funksiyalari mavjud emas
+⚠️ Murojaatlar oddiy navbatda ko'rib chiqiladi
+⚠️ Cheklangan statistika
+
+PREMIUM TARIF USTUNLIKLARI:
+✅ Cheksiz murojaatlar
+✅ Birinchi navbatda javob
+✅ Barcha AI funksiyalari
+✅ Batafsil statistika
+✅ Professional yordam
+
+================================================================================
+TO'LOV TIZIMI
+================================================================================
+
+TO'LOV USULLARI:
+1. Telegram Wallet (TON) - ✅ Faol
+2. Payme - ⏳ Tez orada qo'shiladi
+
+XAVFSIZLIK:
+✅ To'liq to'lov tekshiruvi
+✅ Duplicate to'lovlarni oldini olish
+✅ Xavfsiz to'lov jarayoni
+✅ Audit trail (barcha to'lovlar yozib boriladi)
+
+TO'LOV JARAYONI:
+1. Premium menuni ochish (/premium)
+2. To'lov usulini tanlash
+3. To'lov summasini ko'rish
+4. To'lovni amalga oshirish
+5. Premium avtomatik faollashtiriladi
+
+================================================================================
+QO'SHIMCHA FUNKSIYALAR
+================================================================================
+
+1. ADMIN FUNKSIYALARI
+   - Murojaat holatini o'zgartirish (/status <ID> <holat>)
+   - Guruhda murojaat holatini o'zgartirish (reply orqali)
+
+2. SPAM HIMOYASI
+   - Tez-tez murojaat yuborishni cheklash
+   - Noto'g'ri murojaatlarni aniqlash
+   - Vaqtinchalik bloklash
+
+3. MODERATSIYA
+   - Murojaat matnini tekshirish
+   - AI yordamida rasmiylashtirish taklifi (bepul)
+   - Premium: Professional formatga o'tkazish
+
+4. FOYDALANUVCHI XULQ-ATVORI
+   - Foydalanuvchi xulq-atvorini kuzatish
+   - Yaxshi foydalanuvchilarni aniqlash
+   - Muammoli foydalanuvchilarni cheklash
+
+5. AUDIT TRAIL
+   - Barcha to'lovlar yozib boriladi
+   - Murojaatlar tarixi
+   - Holat o'zgarishlari kuzatiladi
+
+================================================================================
+STATISTIKA VA HISOBOTLAR
+================================================================================
+
+BEPUL FOYDALANUVCHILAR UCHUN:
+✓ Jami murojaatlar soni
+✓ Bu oydagi murojaatlar soni
+✓ Holatlar bo'yicha taqsimot
+✓ Muvaffaqiyat darajasi (%)
+
+PREMIUM FOYDALANUVCHILAR UCHUN:
+✨ Barcha bepul statistika
+✨ O'rtacha javob vaqti
+✨ Premium muddati va qolgan kunlar
+✨ Batafsil tahlil
+
+================================================================================
+TEXNIK MA'LUMOTLAR
+================================================================================
+
+PLATFORMA: Telegram Bot
+TILLAR: O'zbek, Rus, Ingliz
+BAZA: PostgreSQL
+CACHE: Redis
+FRAMEWORK: Node.js + Express.js
+ORM: Sequelize
+
+================================================================================
+YORDAM VA QO'LLAB-QUVVATLASH
+================================================================================
+
+YORDAM OLISH:
+/help - Yordam menyusini ko'rish
+/start - Botni qayta boshlash
+/language - Tilni o'zgartirish
+/status <ID> - Murojaat holatini ko'rish
+/statistics - Statistika ko'rish
+/premium - Premium tarif haqida ma'lumot
+
+================================================================================
+YAKUNIY ESLAVMALAR
+================================================================================
+
+✅ Bepul tarif - Asosiy funksiyalar bepul
+✅ Premium tarif - Qo'shimcha imtiyozlar uchun
+✅ Guruh Premium - Tashkilotlar uchun
+✅ Xavfsiz to'lov tizimi
+✅ Ko'p tilli qo'llab-quvvatlash
+✅ AI yordamchisi (Premium)
+✅ Professional xizmatlar
+
+================================================================================
+YANGILANISH SANASI: 2025-yil
+VERSIYA: 1.0
+================================================================================
+

@@ -1,0 +1,21 @@
+{
+  "message": "Xabar",
+  "view_details": "Batafsil ko'rish",
+  "rate_org": "Tashkilotni baholash",
+  "new_application": "Yangi murojaat yuborish",
+  "new_feature": "Yangi funksiya!",
+  "try_now": "Hozir sinab ko'ring",
+  "try": "Sinab ko'rish",
+  "status": {
+    "pending": "Kutilmoqda",
+    "in_progress": "Ko'rib chiqilmoqda",
+    "completed": "Bajarildi",
+    "rejected": "Rad etildi"
+  },
+  "user": {
+    "application_accepted": "Murojaat qabul qilindi",
+    "accepted_by": "Qabul qildi",
+    "will_contact_soon": "Tez orada siz bilan bog'lanamiz"
+  }
+}
+
