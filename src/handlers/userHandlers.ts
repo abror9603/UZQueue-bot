@@ -12,7 +12,29 @@ import { log } from '../utils/logger';
  * /start command handler
  */
 export const handleStart = asyncHandler(async (ctx: ExtendedContext) => {
-  await startOnboarding(ctx);
+  const telegramId = ctx.from!.id;
+  
+  try {
+    // Check if user already exists
+    const { User } = await import('../models');
+    const existingUser = await User.findByTelegramId(telegramId);
+
+    if (existingUser) {
+      // User already registered - show main menu
+      ctx.user = existingUser.toObject() as any;
+      ctx.language = existingUser.language;
+      
+      const { showMainMenu } = await import('./queueHandlers');
+      await showMainMenu(ctx);
+    } else {
+      // New user - start onboarding
+      await startOnboarding(ctx);
+    }
+  } catch (error) {
+    log.error('Error in handleStart', error);
+    // Fallback to onboarding if error
+    await startOnboarding(ctx);
+  }
 });
 
 /**

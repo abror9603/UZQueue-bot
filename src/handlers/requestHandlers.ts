@@ -70,6 +70,11 @@ export const handleTextRequest = asyncHandler(async (ctx: ExtendedContext) => {
       text
     );
 
+    // Clear session if it was set for request
+    if (ctx.session?.step === 'waiting_for_request') {
+      ctx.session = undefined;
+    }
+
     // Send confirmation
     const successMessages = {
       uz: `✅ *Murojaatingiz qabul qilindi!*\n\n` +
@@ -189,6 +194,11 @@ export const handleMediaRequest = asyncHandler(async (ctx: ExtendedContext) => {
       mediaFiles
     );
 
+    // Clear session if it was set for request
+    if (ctx.session?.step === 'waiting_for_request') {
+      ctx.session = undefined;
+    }
+
     const successMessages = {
       uz: `✅ *Murojaatingiz qabul qilindi!*\n\n` +
           `🆔 Tracking ID: \`${request.trackingId}\`\n\n` +
@@ -278,6 +288,11 @@ export const handleVoiceRequest = asyncHandler(async (ctx: ExtendedContext) => {
       'Voice message',
       voiceMessage
     );
+
+    // Clear session if it was set for request
+    if (ctx.session?.step === 'waiting_for_request') {
+      ctx.session = undefined;
+    }
 
     const successMessages = {
       uz: `✅ *Ovozli murojaatingiz qabul qilindi!*\n\n` +

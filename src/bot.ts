@@ -9,7 +9,6 @@ import { getEnv } from './config/env';
 import { database } from './config/database';
 import { log } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
-import { rateLimitMiddleware } from './middleware/rateLimit';
 import { loggingMiddleware } from './middleware/logging';
 import { loadUserMiddleware } from './middleware/auth';
 
@@ -42,10 +41,7 @@ bot.use(session({
 // Logging (first - to log everything)
 bot.use(loggingMiddleware());
 
-// Rate limiting (before user loading to prevent DB spam)
-bot.use(rateLimitMiddleware());
-
-// Load user from database (after rate limiting)
+// Load user from database
 bot.use(loadUserMiddleware());
 
 // ================================
@@ -111,6 +107,95 @@ bot.on('callback_query', async (ctx) => {
   if (data?.startsWith('onboarding_')) {
     await handleOnboardingCallback(ctx);
     return;
+  }
+  
+  // Queue booking handlers
+  if (data?.startsWith('org_') || 
+      data?.startsWith('service_') || 
+      data?.startsWith('date_') || 
+      data?.startsWith('time_') || 
+      data?.startsWith('confirm_booking_') || 
+      data?.startsWith('request_') ||
+      data === 'back_to_main' ||
+      data?.startsWith('back_to_services_') ||
+      data?.startsWith('back_to_date_') ||
+      data === 'help' ||
+      data === 'settings' ||
+      data === 'my_queues') {
+    const {
+      handleOrganizationSelection,
+      handleServiceSelection,
+      handleDateSelection,
+      handleTimeSelection,
+      handleBookingConfirmation,
+      handleRequestButton,
+      handleBackToMain,
+      handleBackToServices,
+      handleBackToDate,
+      handleHelp,
+      handleSettings,
+      handleMyQueues
+    } = await import('./handlers/queueHandlers');
+    
+    if (data?.startsWith('org_')) {
+      await handleOrganizationSelection(ctx);
+      return;
+    }
+    
+    if (data?.startsWith('service_')) {
+      await handleServiceSelection(ctx);
+      return;
+    }
+    
+    if (data?.startsWith('date_')) {
+      await handleDateSelection(ctx);
+      return;
+    }
+    
+    if (data?.startsWith('time_')) {
+      await handleTimeSelection(ctx);
+      return;
+    }
+    
+    if (data?.startsWith('confirm_booking_')) {
+      await handleBookingConfirmation(ctx);
+      return;
+    }
+    
+    if (data?.startsWith('request_')) {
+      await handleRequestButton(ctx);
+      return;
+    }
+    
+    if (data === 'back_to_main') {
+      await handleBackToMain(ctx);
+      return;
+    }
+    
+    if (data?.startsWith('back_to_services_')) {
+      await handleBackToServices(ctx);
+      return;
+    }
+    
+    if (data?.startsWith('back_to_date_')) {
+      await handleBackToDate(ctx);
+      return;
+    }
+    
+    if (data === 'help') {
+      await handleHelp(ctx);
+      return;
+    }
+    
+    if (data === 'settings') {
+      await handleSettings(ctx);
+      return;
+    }
+    
+    if (data === 'my_queues') {
+      await handleMyQueues(ctx);
+      return;
+    }
   }
   
   // Answer callback query

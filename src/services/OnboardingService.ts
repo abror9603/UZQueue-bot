@@ -346,29 +346,9 @@ async function completeOnboarding(ctx: ExtendedContext): Promise<void> {
           `Send a message for a new request or send /help command.`
     };
 
-    await ctx.editMessageText(messages[language] || messages.uz, {
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: language === 'uz' ? '📝 Yangi murojaat' :
-                   language === 'ru' ? '📝 Новый запрос' :
-                   '📝 New request',
-              callback_data: 'new_request'
-            }
-          ],
-          [
-            {
-              text: language === 'uz' ? 'ℹ️ Yordam' :
-                   language === 'ru' ? 'ℹ️ Помощь' :
-                   'ℹ️ Help',
-              callback_data: 'help'
-            }
-          ]
-        ]
-      }
-    });
+    // Show main menu after onboarding
+    const { showMainMenu } = await import('../handlers/queueHandlers');
+    await showMainMenu(ctx);
 
     // Clear session
     ctx.session = undefined;
