@@ -11,6 +11,7 @@
 import { ExtendedContext, QueueSessionData } from '../types/context';
 import { asyncHandler } from '../middleware/errorHandler';
 import { log } from '../utils/logger';
+import { SystemLog } from '../models/SystemLog';
 
 // ================================
 // TYPES & INTERFACES
@@ -235,65 +236,92 @@ export async function showMainMenu(ctx: ExtendedContext): Promise<void> {
           `Queue-free service system. Please select one of the following organizations:`
     };
 
-    // Create keyboard based on language
-    let keyboard: Array<Array<{ text: string; callback_data: string }>>;
-    
+    // Create reply keyboard for all menu options
+    let replyKeyboard: Array<Array<{ text: string }>>;
     if (language === 'ru') {
-      keyboard = [
+      replyKeyboard = [
         [
-          { text: '🏛 Услуги хокимията', callback_data: 'org_hokimlik' },
-          { text: '💰 Налоговая инспекция', callback_data: 'org_soliq' }
+          { text: '🏛 Услуги хокимията' },
+          { text: '💰 Налоговая инспекция' }
         ],
         [
-          { text: '🏘 Коммунальные услуги', callback_data: 'org_kommunal' }
+          { text: '🏘 Коммунальные услуги' }
         ],
         [
-          { text: 'ℹ️ Помощь', callback_data: 'help' },
-          { text: '⚙️ Настройки', callback_data: 'settings' }
+          { text: 'ℹ️ Помощь' },
+          { text: '⚙️ Настройки' }
         ]
       ];
     } else if (language === 'en') {
-      keyboard = [
+      replyKeyboard = [
         [
-          { text: '🏛 Mayor\'s Office', callback_data: 'org_hokimlik' },
-          { text: '💰 Tax Inspection', callback_data: 'org_soliq' }
+          { text: '🏛 Mayor\'s Office' },
+          { text: '💰 Tax Inspection' }
         ],
         [
-          { text: '🏘 Utility Services', callback_data: 'org_kommunal' }
+          { text: '🏘 Utility Services' }
         ],
         [
-          { text: 'ℹ️ Help', callback_data: 'help' },
-          { text: '⚙️ Settings', callback_data: 'settings' }
+          { text: 'ℹ️ Help' },
+          { text: '⚙️ Settings' }
         ]
       ];
     } else {
-      keyboard = [
+      replyKeyboard = [
         [
-          { text: '🏛 Hokimlik xizmatlari', callback_data: 'org_hokimlik' },
-          { text: '💰 Soliq inspeksiyasi', callback_data: 'org_soliq' }
+          { text: '🏛 Hokimlik xizmatlari' },
+          { text: '💰 Soliq inspeksiyasi' }
         ],
         [
-          { text: '🏘 Kommunal xizmatlar', callback_data: 'org_kommunal' }
+          { text: '🏘 Kommunal xizmatlar' }
         ],
         [
-          { text: 'ℹ️ Yordam', callback_data: 'help' },
-          { text: '⚙️ Sozlamalar', callback_data: 'settings' }
+          { text: 'ℹ️ Yordam' },
+          { text: '⚙️ Sozlamalar' }
         ]
       ];
     }
 
     if (ctx.callbackQuery) {
-      await ctx.editMessageText(messages[language] || messages.uz, {
+      // If editing a message that had inline keyboard, we need to handle it differently
+      // Telegram API requires inline keyboard when editing a message that had inline keyboard
+      try {
+        // First, try to edit with empty inline keyboard to remove old keyboard
+        await ctx.editMessageText(messages[language] || messages.uz, {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: []
+          }
+        });
+        
+        // Then delete the message and send a new one with reply keyboard
+        await ctx.deleteMessage().catch(() => {});
+      } catch (error) {
+        // If edit fails, try to delete and send new message
+        try {
+          await ctx.deleteMessage().catch(() => {});
+        } catch (deleteError) {
+          // If deletion also fails, just send a new message (old one will remain)
+          log.debug('Could not delete message', deleteError);
+        }
+      }
+      
+      // Send new message with reply keyboard
+      await ctx.reply(messages[language] || messages.uz, {
         parse_mode: 'Markdown',
         reply_markup: {
-          inline_keyboard: keyboard
+          keyboard: replyKeyboard,
+          resize_keyboard: true
         }
       });
+      
+      // Note: answerCbQuery should be called by the handler, not here
     } else {
       await ctx.reply(messages[language] || messages.uz, {
         parse_mode: 'Markdown',
         reply_markup: {
-          inline_keyboard: keyboard
+          keyboard: replyKeyboard,
+          resize_keyboard: true
         }
       });
     }
@@ -308,21 +336,39 @@ export async function showMainMenu(ctx: ExtendedContext): Promise<void> {
 // ================================
 
 /**
- * Handle organization selection
+ * Handle organization selection (works with both callback query and text message)
  */
 export const handleOrganizationSelection = asyncHandler(async (ctx: ExtendedContext) => {
   try {
-    if (!('data' in ctx.callbackQuery!)) {
-      await ctx.answerCbQuery('❌ Xato');
-      return;
+    let orgCode: OrganizationCode;
+    
+    // Check if it's a callback query
+    if (ctx.callbackQuery && 'data' in ctx.callbackQuery) {
+      const data = ctx.callbackQuery.data;
+      if (!data?.startsWith('org_')) {
+        await ctx.answerCbQuery('❌ Xato');
+        return;
+      }
+      orgCode = data.replace('org_', '') as OrganizationCode;
+    } else {
+      // It's a text message - orgCode should be passed via context or extracted from text
+      // For now, we'll use a helper function to extract org code from text
+      const text = ctx.message?.text?.toLowerCase() || '';
+      
+      // Map text to organization code
+      if (text.includes('hokimlik') || text.includes('хокимият') || text.includes('mayor')) {
+        orgCode = 'hokimlik';
+      } else if (text.includes('soliq') || text.includes('налог') || text.includes('tax')) {
+        orgCode = 'soliq';
+      } else if (text.includes('kommunal') || text.includes('коммунал') || text.includes('utility')) {
+        orgCode = 'kommunal';
+      } else {
+        // Default or error
+        await ctx.reply('❌ Tashkilot topilmadi');
+        return;
+      }
     }
 
-    const data = ctx.callbackQuery.data;
-    if (!data?.startsWith('org_')) {
-      return;
-    }
-
-    const orgCode = data.replace('org_', '') as OrganizationCode;
     const language = ctx.language || 'uz';
 
     // Update session
@@ -341,16 +387,28 @@ export const handleOrganizationSelection = asyncHandler(async (ctx: ExtendedCont
     // Find organization
     const organization = organizations.find(o => o.code === orgCode);
     if (!organization) {
-      await ctx.answerCbQuery('❌ Tashkilot topilmadi');
+      if (ctx.callbackQuery) {
+        await ctx.answerCbQuery('❌ Tashkilot topilmadi');
+      } else {
+        await ctx.reply('❌ Tashkilot topilmadi');
+      }
       return;
     }
 
     // Show services menu
     await showServicesMenu(ctx, orgCode, language);
-    await ctx.answerCbQuery();
+    
+    // Answer callback query if it exists
+    if (ctx.callbackQuery) {
+      await ctx.answerCbQuery();
+    }
   } catch (error) {
     log.error('Error handling organization selection', error);
-    await ctx.answerCbQuery('❌ Xatolik yuz berdi').catch(() => {});
+    if (ctx.callbackQuery) {
+      await ctx.answerCbQuery('❌ Xatolik yuz berdi').catch(() => {});
+    } else {
+      await ctx.reply('❌ Xatolik yuz berdi').catch(() => {});
+    }
     throw error;
   }
 });
@@ -1039,31 +1097,12 @@ export const handleBackToDate = asyncHandler(async (ctx: ExtendedContext) => {
 // ================================
 
 /**
- * Handle help action (placeholder)
+ * Handle help action - re-export from helpHandlers
  */
-export const handleHelp = asyncHandler(async (ctx: ExtendedContext) => {
-  try {
-    const language = ctx.language || 'uz';
-
-    const messages = {
-      uz: `ℹ️ *Yordam*\n\n` +
-          `Bu funksiya tez orada qo'shiladi.`,
-      ru: `ℹ️ *Помощь*\n\n` +
-          `Эта функция будет добавлена в ближайшее время.`,
-      en: `ℹ️ *Help*\n\n` +
-          `This feature will be added soon.`
-    };
-
-    await ctx.answerCbQuery(messages[language] || messages.uz);
-  } catch (error) {
-    log.error('Error handling help', error);
-    await ctx.answerCbQuery('❌ Xatolik yuz berdi').catch(() => {});
-    throw error;
-  }
-});
+export { handleHelp } from './helpHandlers';
 
 /**
- * Handle settings action (placeholder)
+ * Handle settings action
  */
 export const handleSettings = asyncHandler(async (ctx: ExtendedContext) => {
   try {
@@ -1071,16 +1110,404 @@ export const handleSettings = asyncHandler(async (ctx: ExtendedContext) => {
 
     const messages = {
       uz: `⚙️ *Sozlamalar*\n\n` +
-          `Bu funksiya tez orada qo'shiladi.`,
+          `Quyidagi sozlamalardan birini tanlang:`,
       ru: `⚙️ *Настройки*\n\n` +
-          `Эта функция будет добавлена в ближайшее время.`,
+          `Выберите одну из настроек:`,
       en: `⚙️ *Settings*\n\n` +
-          `This feature will be added soon.`
+          `Please select one of the settings:`
     };
 
-    await ctx.answerCbQuery(messages[language] || messages.uz);
+    const keyboard = {
+      uz: [
+        [
+          { text: '🌍 Til sozlamalari', callback_data: 'settings_language' }
+        ],
+        [
+          { text: '🔙 Bosh menyu', callback_data: 'back_to_main' }
+        ]
+      ],
+      ru: [
+        [
+          { text: '🌍 Языковые настройки', callback_data: 'settings_language' }
+        ],
+        [
+          { text: '🔙 Главное меню', callback_data: 'back_to_main' }
+        ]
+      ],
+      en: [
+        [
+          { text: '🌍 Language Settings', callback_data: 'settings_language' }
+        ],
+        [
+          { text: '🔙 Main Menu', callback_data: 'back_to_main' }
+        ]
+      ]
+    };
+
+    const message = messages[language] || messages.uz;
+    const replyKeyboard = keyboard[language] || keyboard.uz;
+
+    // Handle callback query
+    if (ctx.callbackQuery) {
+      await ctx.editMessageText(message, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: replyKeyboard
+        }
+      });
+      await ctx.answerCbQuery();
+    } else {
+      // Handle text message
+      await ctx.reply(message, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: replyKeyboard
+        }
+      });
+    }
   } catch (error) {
     log.error('Error handling settings', error);
+    if (ctx.callbackQuery) {
+      await ctx.answerCbQuery('❌ Xatolik yuz berdi').catch(() => {});
+    }
+    throw error;
+  }
+});
+
+/**
+ * Handle language settings
+ */
+export const handleLanguageSettings = asyncHandler(async (ctx: ExtendedContext) => {
+  try {
+    const language = ctx.language || 'uz';
+
+    const messages = {
+      uz: `🌍 *Til sozlamalari*\n\n` +
+          `Joriy til: *O'zbek*\n\n` +
+          `Qaysi tilni tanlamoqchisiz?`,
+      ru: `🌍 *Языковые настройки*\n\n` +
+          `Текущий язык: *Русский*\n\n` +
+          `Какой язык вы хотите выбрать?`,
+      en: `🌍 *Language Settings*\n\n` +
+          `Current language: *English*\n\n` +
+          `Which language would you like to select?`
+    };
+
+    // Get current language for display
+    const currentLang = ctx.language || 'uz';
+    const currentLangNames = {
+      uz: "O'zbek",
+      ru: 'Русский',
+      en: 'English'
+    };
+
+    const messagesWithCurrent = {
+      uz: `🌍 *Til sozlamalari*\n\n` +
+          `Joriy til: *${currentLangNames[currentLang as keyof typeof currentLangNames]}*\n\n` +
+          `Qaysi tilni tanlamoqchisiz?`,
+      ru: `🌍 *Языковые настройки*\n\n` +
+          `Текущий язык: *${currentLangNames[currentLang as keyof typeof currentLangNames]}*\n\n` +
+          `Какой язык вы хотите выбрать?`,
+      en: `🌍 *Language Settings*\n\n` +
+          `Current language: *${currentLangNames[currentLang as keyof typeof currentLangNames]}*\n\n` +
+          `Which language would you like to select?`
+    };
+
+    const keyboard = [
+      [
+        { 
+          text: currentLang === 'uz' ? '✅ 🇺🇿 O\'zbek' : '🇺🇿 O\'zbek', 
+          callback_data: 'settings_change_lang_uz' 
+        }
+      ],
+      [
+        { 
+          text: currentLang === 'ru' ? '✅ 🇷🇺 Русский' : '🇷🇺 Русский', 
+          callback_data: 'settings_change_lang_ru' 
+        }
+      ],
+      [
+        { 
+          text: currentLang === 'en' ? '✅ 🇬🇧 English' : '🇬🇧 English', 
+          callback_data: 'settings_change_lang_en' 
+        }
+      ],
+      [
+        { 
+          text: language === 'uz' ? '🔙 Orqaga' : 
+                language === 'ru' ? '🔙 Назад' : 
+                '🔙 Back', 
+          callback_data: 'settings' 
+        }
+      ]
+    ];
+
+    const message = messagesWithCurrent[language] || messagesWithCurrent.uz;
+
+    if (ctx.callbackQuery) {
+      await ctx.editMessageText(message, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: keyboard
+        }
+      });
+      await ctx.answerCbQuery();
+    } else {
+      await ctx.reply(message, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: keyboard
+        }
+      });
+    }
+  } catch (error) {
+    log.error('Error handling language settings', error);
+    if (ctx.callbackQuery) {
+      await ctx.answerCbQuery('❌ Xatolik yuz berdi').catch(() => {});
+    }
+    throw error;
+  }
+});
+
+/**
+ * Handle language change
+ */
+export const handleLanguageChange = asyncHandler(async (ctx: ExtendedContext) => {
+  try {
+    if (!('data' in ctx.callbackQuery!)) {
+      await ctx.answerCbQuery('❌ Xato');
+      return;
+    }
+
+    const data = ctx.callbackQuery.data;
+    if (!data?.startsWith('settings_change_lang_')) {
+      return;
+    }
+
+    const newLanguage = data.replace('settings_change_lang_', '') as 'uz' | 'ru' | 'en';
+    const oldLanguage = ctx.language || 'uz';
+    
+    // Update user language in database FIRST
+    const { User } = await import('../models');
+    const user = await User.findByTelegramId(ctx.from!.id);
+    
+    if (user) {
+      user.language = newLanguage;
+      await user.save();
+      
+      // CRITICAL: Update context user and language IMMEDIATELY
+      // This ensures all subsequent messages in this session use the new language
+      ctx.user = user.toObject() as any;
+      ctx.language = newLanguage;
+    } else {
+      // If user doesn't exist, just update context
+      ctx.language = newLanguage;
+    }
+    
+    // Force refresh user data in context for next requests
+    // This ensures middleware will use the new language
+    if (user) {
+      // Reload user to ensure context is updated
+      const refreshedUser = await User.findByTelegramId(ctx.from!.id);
+      if (refreshedUser) {
+        ctx.user = refreshedUser.toObject() as any;
+        ctx.language = refreshedUser.language;
+      }
+    }
+
+    const messages = {
+      uz: {
+        success: `✅ *Til o'zgartirildi*\n\n` +
+                `Yangi til: *O'zbek*\n\n` +
+                `Til muvaffaqiyatli o'zgartirildi!`,
+        uz: `✅ *Til o'zgartirildi*\n\n` +
+            `Yangi til: *O'zbek*\n\n` +
+            `Til muvaffaqiyatli o'zgartirildi!`,
+        ru: `✅ *Til o'zgartirildi*\n\n` +
+            `Yangi til: *Русский*\n\n` +
+            `Til muvaffaqiyatli o'zgartirildi!`,
+        en: `✅ *Til o'zgartirildi*\n\n` +
+            `Yangi til: *English*\n\n` +
+            `Til muvaffaqiyatli o'zgartirildi!`
+      },
+      ru: {
+        success: `✅ *Язык изменен*\n\n` +
+                `Новый язык: *Русский*\n\n` +
+                `Язык успешно изменен!`,
+        uz: `✅ *Язык изменен*\n\n` +
+            `Новый язык: *O'zbek*\n\n` +
+            `Язык успешно изменен!`,
+        ru: `✅ *Язык изменен*\n\n` +
+            `Новый язык: *Русский*\n\n` +
+            `Язык успешно изменен!`,
+        en: `✅ *Язык изменен*\n\n` +
+            `Новый язык: *English*\n\n` +
+            `Язык успешно изменен!`
+      },
+      en: {
+        success: `✅ *Language Changed*\n\n` +
+                `New language: *English*\n\n` +
+                `Language successfully changed!`,
+        uz: `✅ *Language Changed*\n\n` +
+            `New language: *O'zbek*\n\n` +
+            `Language successfully changed!`,
+        ru: `✅ *Language Changed*\n\n` +
+            `New language: *Русский*\n\n` +
+            `Language successfully changed!`,
+        en: `✅ *Language Changed*\n\n` +
+            `New language: *English*\n\n` +
+            `Language successfully changed!`
+      }
+    };
+
+    const langNames = {
+      uz: "O'zbek",
+      ru: 'Русский',
+      en: 'English'
+    };
+
+    // Use new language for the message
+    const message = messages[newLanguage].success || 
+                   `✅ Language changed to ${langNames[newLanguage]}`;
+
+    // Create reply keyboard with new language
+    let replyKeyboard: Array<Array<{ text: string }>>;
+    if (newLanguage === 'ru') {
+      replyKeyboard = [
+        [
+          { text: '🏛 Услуги хокимията' },
+          { text: '💰 Налоговая инспекция' }
+        ],
+        [
+          { text: '🏘 Коммунальные услуги' }
+        ],
+        [
+          { text: 'ℹ️ Помощь' },
+          { text: '⚙️ Настройки' }
+        ]
+      ];
+    } else if (newLanguage === 'en') {
+      replyKeyboard = [
+        [
+          { text: '🏛 Mayor\'s Office' },
+          { text: '💰 Tax Inspection' }
+        ],
+        [
+          { text: '🏘 Utility Services' }
+        ],
+        [
+          { text: 'ℹ️ Help' },
+          { text: '⚙️ Settings' }
+        ]
+      ];
+    } else {
+      replyKeyboard = [
+        [
+          { text: '🏛 Hokimlik xizmatlari' },
+          { text: '💰 Soliq inspeksiyasi' }
+        ],
+        [
+          { text: '🏘 Kommunal xizmatlar' }
+        ],
+        [
+          { text: 'ℹ️ Yordam' },
+          { text: '⚙️ Sozlamalar' }
+        ]
+      ];
+    }
+
+    // CRITICAL: Update reply keyboard FIRST in real-time
+    // Telegram API limitation: reply keyboard can only be set with NEW messages, not edited messages
+    // So we need to send a new message with reply keyboard to update it immediately
+    
+    try {
+      // Delete the old message (language settings message) to avoid clutter
+      await ctx.deleteMessage().catch(() => {
+        // If deletion fails, try to edit with empty inline keyboard first
+        return ctx.editMessageText(' ', {
+          reply_markup: {
+            inline_keyboard: []
+          }
+        }).catch(() => {});
+      });
+      
+      // Send new message with success notification AND reply keyboard
+      // This is the only way to update reply keyboard in Telegram API
+      await ctx.reply(message, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          keyboard: replyKeyboard,
+          resize_keyboard: true
+        }
+      });
+      
+      log.info('Reply keyboard updated with success message', {
+        userId: ctx.from!.id,
+        newLanguage,
+        oldLanguage,
+        keyboardUpdated: true
+      });
+      
+      // Answer callback query
+      await ctx.answerCbQuery(`✅ ${langNames[newLanguage]}`).catch(() => {});
+    } catch (error) {
+      log.error('Failed to update reply keyboard', error, {
+        userId: ctx.from!.id,
+        newLanguage,
+        chatId: ctx.chat?.id
+      });
+      
+      // Fallback: edit message normally if reply keyboard update fails
+      await ctx.editMessageText(message, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { 
+                text: newLanguage === 'uz' ? '🔙 Bosh menyu' : 
+                      newLanguage === 'ru' ? '🔙 Главное меню' : 
+                      '🔙 Main Menu', 
+                callback_data: 'back_to_main' 
+              }
+            ]
+          ]
+        }
+      }).catch(() => {});
+      
+      // Answer callback query even on error
+      await ctx.answerCbQuery(`✅ ${langNames[newLanguage]}`).catch(() => {});
+    }
+
+    // Log language change
+    await SystemLog.logEvent(
+      'user_action',
+      'language_changed',
+      {
+        userId: ctx.from!.id,
+        oldLanguage: oldLanguage,
+        newLanguage: newLanguage
+      },
+      {
+        userId: ctx.from!.id,
+        result: 'success'
+      }
+    );
+    
+    // IMPORTANT: After language change, all subsequent messages in this session
+    // will use the new language because:
+    // 1. ctx.language is updated immediately
+    // 2. ctx.user is updated with new language
+    // 3. Middleware will load user from database on next request
+    // 4. All handlers use ctx.language for translations
+    
+    log.info('Language changed', {
+      userId: ctx.from!.id,
+      oldLanguage,
+      newLanguage,
+      contextUpdated: true
+    });
+  } catch (error) {
+    log.error('Error changing language', error);
     await ctx.answerCbQuery('❌ Xatolik yuz berdi').catch(() => {});
     throw error;
   }

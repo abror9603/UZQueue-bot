@@ -22,7 +22,13 @@ const envSchema = z.object({
   REDIS_URL: z.string().optional(),
   SENTRY_DSN: z.string().url().optional().or(z.literal('')),
   SUPER_ADMIN_IDS: z.string().optional(),
-  CLAUDE_API_KEY: z.string().optional() // Legacy support
+  CLAUDE_API_KEY: z.string().optional(), // Legacy support
+  
+  // Support settings (optional)
+  SUPPORT_CHAT_ID: z.string().optional(),
+  SUPPORT_TELEGRAM: z.string().optional(),
+  SUPPORT_PHONE: z.string().optional(),
+  SUPPORT_EMAIL: z.string().optional()
 });
 
 type EnvConfig = z.infer<typeof envSchema>;
@@ -79,6 +85,35 @@ export function getSuperAdminIds(): number[] {
     .split(',')
     .map(id => parseInt(id.trim(), 10))
     .filter(id => !isNaN(id));
+}
+
+/**
+ * Get support chat ID
+ */
+export function getSupportChatId(): number | null {
+  const env = getEnv();
+  if (!env.SUPPORT_CHAT_ID) {
+    return null;
+  }
+  
+  const chatId = parseInt(env.SUPPORT_CHAT_ID.trim(), 10);
+  return isNaN(chatId) ? null : chatId;
+}
+
+/**
+ * Get support contact info
+ */
+export function getSupportContacts(): {
+  telegram: string;
+  phone: string;
+  email: string;
+} {
+  const env = getEnv();
+  return {
+    telegram: env.SUPPORT_TELEGRAM || '@UZQueue_Support',
+    phone: env.SUPPORT_PHONE || '+998 71 123-45-67',
+    email: env.SUPPORT_EMAIL || 'support@uzqueue.uz'
+  };
 }
 
 // Validate on import

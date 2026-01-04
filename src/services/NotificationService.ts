@@ -169,3 +169,185 @@ export async function notifySuperAdmin(
   }
 }
 
+/**
+ * NotificationService Class
+ * Wrapper class for notification methods (for DeadlineManager compatibility)
+ */
+export class NotificationService {
+  /**
+   * Notify user about status change
+   */
+  async notifyStatusChange(
+    requestId: mongoose.Types.ObjectId,
+    newStatus: string,
+    customMessage?: string
+  ): Promise<void> {
+    try {
+      const request = await Request.findById(requestId)
+        .populate('userId')
+        .populate('assignedTo');
+
+      if (!request) {
+        log.warn('Request not found for notification', { requestId });
+        return;
+      }
+
+      if (customMessage) {
+        await bot.telegram.sendMessage(request.userTelegramId, customMessage, {
+          parse_mode: 'Markdown'
+        });
+      } else {
+        await notifyUserStatusChange(request.userTelegramId, request, newStatus);
+      }
+    } catch (error) {
+      log.error('Error in notifyStatusChange', error, { requestId });
+    }
+  }
+
+  /**
+   * Notify organization about new assignment
+   */
+  async notifyOrganization(
+    organizationId: mongoose.Types.ObjectId,
+    requestId: mongoose.Types.ObjectId,
+    customMessage?: string
+  ): Promise<void> {
+    try {
+      const request = await Request.findById(requestId);
+      if (!request) {
+        log.warn('Request not found', { requestId });
+        return;
+      }
+
+      if (customMessage) {
+        const org = await Organization.findById(organizationId);
+        if (org && org.telegramChatId) {
+          await bot.telegram.sendMessage(org.telegramChatId, customMessage, {
+            parse_mode: 'Markdown'
+          });
+        }
+      } else {
+        await notifyOrganization(organizationId, request);
+      }
+    } catch (error) {
+      log.error('Error in notifyOrganization', error, { organizationId, requestId });
+    }
+  }
+
+  /**
+   * Send deadline reminder to user
+   */
+  async sendDeadlineReminder(
+    requestId: mongoose.Types.ObjectId,
+    daysLeft: number
+  ): Promise<void> {
+    try {
+      const request = await Request.findById(requestId)
+        .populate('userId')
+        .populate('assignedTo');
+
+      if (!request) {
+        log.warn('Request not found for reminder', { requestId });
+        return;
+      }
+
+      const user = await User.findByTelegramId(request.userTelegramId);
+      if (!user) {
+        return;
+      }
+
+      const language = user.language || 'uz';
+
+      const messages = {
+        uz: `⏰ *Murojaat muddati eslatmasi*\n\n` +
+            `🆔 Tracking ID: \`${request.trackingId}\`\n` +
+            `📅 Qolgan kunlar: *${daysLeft} kun*\n` +
+            `🏢 Tashkilot: ${request.assignedTo?.name?.uz || 'Tashkilot'}\n\n` +
+            `Iltimos, javobni kuting. Holatni kuzatish: /track ${request.trackingId}`,
+        ru: `⏰ *Напоминание о сроке запроса*\n\n` +
+            `🆔 Tracking ID: \`${request.trackingId}\`\n` +
+            `📅 Осталось дней: *${daysLeft} дней*\n` +
+            `🏢 Организация: ${request.assignedTo?.name?.ru || 'Организация'}\n\n` +
+            `Пожалуйста, ожидайте ответа. Отследить статус: /track ${request.trackingId}`,
+        en: `⏰ *Request Deadline Reminder*\n\n` +
+            `🆔 Tracking ID: \`${request.trackingId}\`\n` +
+            `📅 Days left: *${daysLeft} days*\n` +
+            `🏢 Organization: ${request.assignedTo?.name?.en || 'Organization'}\n\n` +
+            `Please wait for response. Track status: /track ${request.trackingId}`
+      };
+
+      const message = messages[language] || messages.uz;
+
+      await bot.telegram.sendMessage(request.userTelegramId, message, {
+        parse_mode: 'Markdown'
+      });
+
+      log.info('Deadline reminder sent', {
+        requestId: request._id,
+        daysLeft,
+        trackingId: request.trackingId
+      });
+    } catch (error) {
+      log.error('Error sending deadline reminder', error, { requestId, daysLeft });
+    }
+  }
+
+  /**
+   * Notify about escalation
+   */
+  async notifyEscalation(
+    requestId: mongoose.Types.ObjectId,
+    toOrgId: mongoose.Types.ObjectId,
+    reason: string
+  ): Promise<void> {
+    try {
+      const request = await Request.findById(requestId)
+        .populate('userId')
+        .populate('assignedTo');
+
+      if (!request) {
+        return;
+      }
+
+      const toOrg = await Organization.findById(toOrgId);
+      if (!toOrg) {
+        return;
+      }
+
+      const user = await User.findByTelegramId(request.userTelegramId);
+      const language = user?.language || 'uz';
+
+      const messages = {
+        uz: `⬆️ *Murojaatingiz ko'tarildi*\n\n` +
+            `🆔 Tracking ID: \`${request.trackingId}\`\n` +
+            `🏢 Yangi tashkilot: ${toOrg.name.uz}\n` +
+            `📝 Sabab: ${reason}\n\n` +
+            `Holatni kuzatish: /track ${request.trackingId}`,
+        ru: `⬆️ *Ваш запрос эскалирован*\n\n` +
+            `🆔 Tracking ID: \`${request.trackingId}\`\n` +
+            `🏢 Новая организация: ${toOrg.name.ru}\n` +
+            `📝 Причина: ${reason}\n\n` +
+            `Отследить статус: /track ${request.trackingId}`,
+        en: `⬆️ *Your request has been escalated*\n\n` +
+            `🆔 Tracking ID: \`${request.trackingId}\`\n` +
+            `🏢 New organization: ${toOrg.name.en}\n` +
+            `📝 Reason: ${reason}\n\n` +
+            `Track status: /track ${request.trackingId}`
+      };
+
+      const message = messages[language] || messages.uz;
+
+      await bot.telegram.sendMessage(request.userTelegramId, message, {
+        parse_mode: 'Markdown'
+      });
+
+      log.info('Escalation notification sent', {
+        requestId: request._id,
+        toOrgId
+      });
+    } catch (error) {
+      log.error('Error notifying escalation', error, { requestId, toOrgId });
+    }
+  }
+}
+

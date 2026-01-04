@@ -7,6 +7,7 @@ import 'dotenv/config';
 import { validateEnv } from './config/env';
 import { initializeBot } from './bot';
 import { log } from './utils/logger';
+import { deadlineManager } from './services/DeadlineManager';
 
 /**
  * Main application entry point
@@ -20,6 +21,10 @@ async function main() {
 
     // Initialize and launch bot
     await initializeBot();
+    
+    // Start deadline manager (cron jobs for reminders and escalation)
+    deadlineManager.scheduleDeadlineChecks();
+    log.info('✅ DeadlineManager started');
     
     log.info('🚀 UZQueue Bot is running!');
     log.info('Press Ctrl+C to stop');
